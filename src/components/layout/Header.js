@@ -12,8 +12,8 @@ const HeaderContainer = styled.header`
   padding: 0 24px;
   position: fixed;
   top: 2vh;
-  right: 2vh;
-  left: ${(props) => (props.$isOpen ? "17vw" : "2vh")};
+  right: 2vw;
+  left: 2vw;
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
   backdrop-filter: blur(8px);
@@ -114,6 +114,12 @@ const Header = () => {
         return { icon: "/images/icons/profile.png", text: "프로필" };
       case "/area":
         return { icon: "/images/icons/vacation.png", text: "연차관리" };
+      case "/admin/dashboard":
+        return { icon: "/images/icons/admin.png", text: "관리자 대시보드" };
+      case "/admin/users":
+        return { icon: "/images/icons/users.png", text: "사용자 관리" };
+      case "/admin/organization":
+        return { icon: "/images/icons/org-manage.png", text: "조직 관리" };
       default:
         return { icon: "/images/icons/home.png", text: "홈" };
     }

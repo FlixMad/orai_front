@@ -1,4 +1,4 @@
-export const theme = {
+const theme = {
   colors: {
     // Primary Color : 버튼, 링크, 헤더 등에 주로 사용.
     primary: "#9CC97F",
@@ -12,6 +12,7 @@ export const theme = {
     // Text Colors : 본문, 제목, 링크 텍스트.
     text1: "#344745",
     text2: "#7A8A8E",
+    text3: "#999999",
     // Status Colors : 알림 메시지, 폼 검증, 배너 경고.
     status1: "#5BA97C",
     status2: "#F4A261",
@@ -26,3 +27,5 @@ export const theme = {
     width: "14vw",
   },
 };
+
+export default theme;

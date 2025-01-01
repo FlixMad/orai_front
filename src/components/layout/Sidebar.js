@@ -1,5 +1,5 @@
 import styled from "styled-components";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useSidebar } from "../../context/SidebarContext";
 
 const SidebarContainer = styled.div`
@@ -7,16 +7,17 @@ const SidebarContainer = styled.div`
   padding-right: 1vw;
   background-color: ${({ theme }) => theme.colors.background2};
   position: fixed;
-  left: ${(props) => (props.$isOpen ? "2%" : "-20%")};
-  top: 2%;
-  bottom: 2%;
+  left: ${(props) => (props.$isOpen ? "2vw" : "-20vw")};
+  top: 2vh;
+  bottom: 2vh;
   border: 1px solid #eaeaea;
   border-radius: 12px;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  transition: all 0.3s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   opacity: ${(props) => (props.$isOpen ? 1 : 0)};
+  z-index: 100;
 `;
 
 const LogoSection = styled.div`
@@ -46,7 +47,7 @@ const NavLinks = styled.div`
   padding-top: 2vh;
 `;
 
-const StyledLink = styled(Link)`
+const StyledLink = styled.div`
   text-decoration: none;
   color: ${({ theme }) => theme.colors.text2};
   padding: 12px 16px;
@@ -57,9 +58,10 @@ const StyledLink = styled(Link)`
   gap: 12px;
   margin: 4px 0;
   font-size: 14px;
-  transition: all 0.1s ease-in-out;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   justify-content: flex-start;
   position: relative;
+  cursor: pointer;
 
   &:hover {
     background-color: #dbe0de;
@@ -70,14 +72,13 @@ const StyledLink = styled(Link)`
     }
   }
 
-  ${(props) =>
-    props.active &&
+  ${({ $active, theme }) =>
+    $active &&
     `
     background-color: #DBE0DE;
-    color: ${props.theme.colors.text1};
+    color: ${theme.colors.text1};
     font-weight: 600;
 
-    
     img {
       opacity: 1;
     }
@@ -108,6 +109,11 @@ const FooterLogo = styled.div`
 const Sidebar = () => {
   const { isOpen } = useSidebar();
   const location = useLocation();
+  const navigate = useNavigate();
+
+  const handleNavigation = (path) => {
+    navigate(path);
+  };
 
   return (
     <SidebarContainer $isOpen={isOpen}>
@@ -120,42 +126,57 @@ const Sidebar = () => {
 
       <NavLinks>
         <StyledLink
-          to="/notifications"
-          active={location.pathname === "/notifications"}
+          onClick={() => handleNavigation("/notifications")}
+          $active={location.pathname === "/notifications"}
         >
           <img src="/images/icons/bell.png" alt="알림" />
           알림
           <img src="/images/icons/arrow-right.png" alt="화살표" />
         </StyledLink>
-        <StyledLink to="/calendar" active={location.pathname === "/calendar"}>
+        <StyledLink
+          onClick={() => handleNavigation("/calendar")}
+          $active={location.pathname === "/calendar"}
+        >
           <img src="/images/icons/calendar.png" alt="캘린더" />
           캘린더
-          <img src="/images/icons/arrow-right.png" alt="캘린더" />
+          <img src="/images/icons/arrow-right.png" alt="화살표" />
         </StyledLink>
-        <StyledLink to="/chat" active={location.pathname === "/chat"}>
+        <StyledLink
+          onClick={() => handleNavigation("/chat")}
+          $active={location.pathname.startsWith("/chat")}
+        >
           <img src="/images/icons/chat.png" alt="채팅방" />
           채팅방
           <img src="/images/icons/arrow-right.png" alt="화살표" />
         </StyledLink>
         <StyledLink
-          to="/organization"
-          active={location.pathname === "/organization"}
+          onClick={() => handleNavigation("/organization")}
+          $active={location.pathname === "/organization"}
         >
           <img src="/images/icons/organization.png" alt="조직도" />
           조직도
           <img src="/images/icons/arrow-right.png" alt="화살표" />
         </StyledLink>
-        <StyledLink to="/emergency" active={location.pathname === "/emergency"}>
+        <StyledLink
+          onClick={() => handleNavigation("/emergency")}
+          $active={location.pathname === "/emergency"}
+        >
           <img src="/images/icons/emergency.png" alt="비상연락망" />
           비상연락망
           <img src="/images/icons/arrow-right.png" alt="화살표" />
         </StyledLink>
-        <StyledLink to="/profile" active={location.pathname === "/profile"}>
+        <StyledLink
+          onClick={() => handleNavigation("/profile")}
+          $active={location.pathname === "/profile"}
+        >
           <img src="/images/icons/profile.png" alt="프로필" />
           프로필
           <img src="/images/icons/arrow-right.png" alt="화살표" />
         </StyledLink>
-        <StyledLink to="/area" active={location.pathname === "/area"}>
+        <StyledLink
+          onClick={() => handleNavigation("/leave")}
+          $active={location.pathname === "/leave"}
+        >
           <img src="/images/icons/vacation.png" alt="연차관리" />
           연차관리
           <img src="/images/icons/arrow-right.png" alt="화살표" />
