@@ -9,7 +9,4 @@ if (clientHostName === "localhost") {
 
 export const API_BASE_URL = backendHostName;
 export const USER = "/user-service";
-export const TRAVELBOARD = "/travelboard-service";
-export const TRAVELPLAN = "/travelplan-service";
-export const MYPAGE = "/mypage-service";
-export const MAIN = "/main-service";
+export const CALENDAR = "/calendar-service";

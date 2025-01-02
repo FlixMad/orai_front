@@ -5,7 +5,7 @@
 
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
-import { API_BASE_URL, MEMBER } from './host-config';
+import { API_BASE_URL} from './host-config';
 
 // Axios 인스턴스 생성
 export const axiosInstance = axios.create({
@@ -70,7 +70,7 @@ axiosInstance.interceptors.response.use(
         const id = localStorage.getItem('USER_ID');
         console.log(id);
 
-        const res = await axios.post(`${API_BASE_URL}${MEMBER}/refresh`, {
+        const res = await axios.post(`${API_BASE_URL}/refresh`, {
           id,
         });
 
