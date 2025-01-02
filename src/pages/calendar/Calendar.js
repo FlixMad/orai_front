@@ -35,12 +35,16 @@ const Calendar = () => {
           start: selectInfo.startStr,
           end: selectInfo.endStr,
         };
+        console.log("newEvent: ", newEvent);
+
+        console.log("API_BASE_URL: ", API_BASE_URL);
+        console.log("CALENDAR: ", CALENDAR);
 
         const response = await axiosInstance.post(
           `${API_BASE_URL}${CALENDAR}/api/schedules/create-schedule`,
           newEvent
         );
-
+        console.log("response: ", response);
         setEvents([...events, response.data]);
       } catch (error) {
         handleAxiosError(error, () => {}, navigate);
