@@ -1,8 +1,11 @@
 import styled from "styled-components";
 import { useState } from "react";
+import AddUserForm from "./AddUserForm";
+import OrganizationManagement from "./OrganizationManagement";
 
 const Dashboard = () => {
   const [activeTab, setActiveTab] = useState("users");
+  const [showAddUserForm, setShowAddUserForm] = useState(false);
 
   return (
     <DashboardContainer>
@@ -32,38 +35,46 @@ const Dashboard = () => {
       <ContentArea>
         {activeTab === "users" && (
           <UserManagement>
-            <SearchSection>
-              <SearchInput
-                type="text"
-                placeholder="사용자 검색 (이름, 부서, 직책)"
-              />
-              <Button>
-                <img src="/images/icons/add-user.png" alt="사용자 추가" />
-                사용자 추가
-              </Button>
-              <Button>
-                <img src="/images/icons/invite.png" alt="초대" />
-                초대하기
-              </Button>
-            </SearchSection>
+            {!showAddUserForm && (
+              <SearchSection>
+                <SearchInput
+                  type="text"
+                  placeholder="사용자 검색 (이름, 부서)"
+                />
+              </SearchSection>
+            )}
 
-            <UsersTable>
-              <thead>
-                <tr>
-                  <th>프로필</th>
-                  <th>이름</th>
-                  <th>부서</th>
-                  <th>직책</th>
-                  <th>이메일</th>
-                  <th>상태</th>
-                  <th>관리</th>
-                </tr>
-              </thead>
-              <tbody>{/* 사용자 목록이 여기에 매핑됩니다 */}</tbody>
-            </UsersTable>
+            {showAddUserForm && (
+              <AddUserForm onBack={() => setShowAddUserForm(false)} />
+            )}
+
+            {!showAddUserForm && (
+              <UsersTable>
+                <thead>
+                  <tr>
+                    <th>프로필</th>
+                    <th>이름</th>
+                    <th>부서</th>
+                    <th>직책</th>
+                    <th>이메일</th>
+                    <th>상태</th>
+                    <th>관리</th>
+                  </tr>
+                </thead>
+                <tbody>{/* 사용자 목록이 여기에 매핑됩니다 */}</tbody>
+              </UsersTable>
+            )}
           </UserManagement>
         )}
+
+        {activeTab === "organization" && <OrganizationManagement />}
       </ContentArea>
+
+      {!showAddUserForm && activeTab === "users" && (
+        <FloatingButton onClick={() => setShowAddUserForm(true)}>
+          <img src="/images/icons/add-user.png" alt="사용자 추가" />
+        </FloatingButton>
+      )}
     </DashboardContainer>
   );
 };
@@ -167,6 +178,31 @@ const UsersTable = styled.table`
 
   td {
     font-size: 14px;
+  }
+`;
+
+const FloatingButton = styled.button`
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background-color: ${({ theme }) => theme.colors.primary};
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  transition: background-color 0.2s ease;
+
+  img {
+    width: 24px;
+    height: 24px;
+  }
+
+  &:hover {
+    background-color: ${({ theme }) => theme.colors.secondary1};
   }
 `;
 
