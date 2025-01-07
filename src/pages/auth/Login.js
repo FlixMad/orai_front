@@ -34,7 +34,7 @@ const Login = () => {
       const { token, email, name } = response.data;
 
       // JWT 토큰 저장
-      localStorage.setItem("jwtToken", token);
+      localStorage.setItem("ACCESS_TOKEN", token);
 
       // 유저 정보 저장 (선택적으로 추가)
       localStorage.setItem("userEmail", email);
