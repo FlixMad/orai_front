@@ -1,40 +1,63 @@
 import styled from "styled-components";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import axios from "axios";
 import AddUserForm from "./AddUserForm";
+import { API_BASE_URL, USER } from "../../configs/host-config";
 import OrganizationManagement from "./OrganizationManagement";
+import { FiEye, FiEdit2, FiTrash2, FiUserPlus } from "react-icons/fi";
 
 const Dashboard = () => {
     const [activeTab, setActiveTab] = useState("users");
     const [showAddUserForm, setShowAddUserForm] = useState(false);
-    const [users, setUsers] = useState([
-        {
-            id: 1,
-            name: "김영희",
-            department: "개발팀",
-            position: "선임 개발자",
-            email: "kim.yh@company.com",
-            status: "재직중",
-            profileImage: "/images/profiles/user1.jpg",
-        },
-        {
-            id: 2,
-            name: "이철수",
-            department: "디자인팀",
-            position: "팀장",
-            email: "lee.cs@company.com",
-            status: "재직중",
-            profileImage: "/images/profiles/user2.jpg",
-        },
-        {
-            id: 3,
-            name: "박지민",
-            department: "인사팀",
-            position: "매니저",
-            email: "park.jm@company.com",
-            status: "휴직중",
-            profileImage: "/images/profiles/user3.jpg",
-        },
-    ]);
+    const [editUser, setEditUser] = useState(null);
+    const [users, setUsers] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+
+    useEffect(() => {
+        const fetchUsers = async () => {
+            try {
+                const response = await axios.get(
+                    `${API_BASE_URL}${USER}/api/admin/users/list`
+                );
+
+                const userData = response.data.result || [];
+
+                const formattedUsers = userData.map((user) => ({
+                    id: user.userId,
+                    name: user.name,
+                    email: user.email,
+                    department: user.departmentId || "미지정",
+                    position: user.position || "미지정",
+                    status: user.accountActive ? "재직중" : "비활성",
+                    profileImage:
+                        user.profileImage || "/images/profiles/default.jpg",
+                    phoneNum: user.phoneNum,
+                }));
+
+                setUsers(formattedUsers);
+                setError(null);
+            } catch (err) {
+                setError("사용자 목록을 불러오는데 실패했습니다.");
+                console.error("Error fetching users:", err);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        if (activeTab === "users") {
+            fetchUsers();
+        }
+    }, [activeTab]);
+
+    const handleEditUser = (user) => {
+        setEditUser(user);
+    };
+
+    const handleCloseModal = () => {
+        setShowAddUserForm(false);
+        setEditUser(null);
+    };
 
     return (
         <DashboardContainer>
@@ -52,34 +75,26 @@ const Dashboard = () => {
                     >
                         조직 관리
                     </TabButton>
-                    <TabButton
-                        active={activeTab === "attendance"}
-                        onClick={() => setActiveTab("attendance")}
-                    >
-                        근태 관리
-                    </TabButton>
                 </TabMenu>
             </DashboardHeader>
 
             <ContentArea>
                 {activeTab === "users" && (
                     <UserManagement>
-                        {!showAddUserForm && (
-                            <SearchSection>
-                                <SearchInput
-                                    type="text"
-                                    placeholder="사용자 검색 (이름, 부서)"
-                                />
-                            </SearchSection>
-                        )}
-
-                        {showAddUserForm && (
-                            <AddUserForm
-                                onBack={() => setShowAddUserForm(false)}
+                        <SearchSection>
+                            <SearchInput
+                                type="text"
+                                placeholder="사용자 검색 (이름, 부서)"
                             />
-                        )}
+                        </SearchSection>
 
-                        {!showAddUserForm && (
+                        {loading ? (
+                            <LoadingMessage>
+                                사용자 목록을 불러오는 중...
+                            </LoadingMessage>
+                        ) : error ? (
+                            <ErrorMessage>{error}</ErrorMessage>
+                        ) : (
                             <UsersTable>
                                 <thead>
                                     <tr>
@@ -114,16 +129,17 @@ const Dashboard = () => {
                                             </td>
                                             <td>
                                                 <ActionButton>
-                                                    <img
-                                                        src="/images/icons/edit.png"
-                                                        alt="편집"
-                                                    />
+                                                    <FiEye size={16} />
+                                                </ActionButton>
+                                                <ActionButton
+                                                    onClick={() =>
+                                                        handleEditUser(user)
+                                                    }
+                                                >
+                                                    <FiEdit2 size={16} />
                                                 </ActionButton>
                                                 <ActionButton>
-                                                    <img
-                                                        src="/images/icons/delete.png"
-                                                        alt="삭제"
-                                                    />
+                                                    <FiTrash2 size={16} />
                                                 </ActionButton>
                                             </td>
                                         </tr>
@@ -135,11 +151,18 @@ const Dashboard = () => {
                 )}
 
                 {activeTab === "organization" && <OrganizationManagement />}
+
+                {(showAddUserForm || editUser) && (
+                    <AddUserForm
+                        onBack={handleCloseModal}
+                        editUser={editUser}
+                    />
+                )}
             </ContentArea>
 
-            {!showAddUserForm && activeTab === "users" && (
+            {activeTab === "users" && !editUser && (
                 <FloatingButton onClick={() => setShowAddUserForm(true)}>
-                    <img src="/images/icons/add-user.png" alt="사용자 추가" />
+                    <FiUserPlus size={24} />
                 </FloatingButton>
             )}
         </DashboardContainer>
@@ -300,16 +323,23 @@ const ActionButton = styled.button`
     background: none;
     border: none;
     cursor: pointer;
+    color: ${({ theme }) => theme.colors.text2};
 
-    img {
-        width: 16px;
-        height: 16px;
-        opacity: 0.6;
+    &:hover {
+        color: ${({ theme }) => theme.colors.primary};
     }
+`;
 
-    &:hover img {
-        opacity: 1;
-    }
+const LoadingMessage = styled.div`
+    text-align: center;
+    padding: 20px;
+    color: ${({ theme }) => theme.colors.text2};
+`;
+
+const ErrorMessage = styled.div`
+    text-align: center;
+    padding: 20px;
+    color: ${({ theme }) => theme.colors.error};
 `;
 
 export default Dashboard;
