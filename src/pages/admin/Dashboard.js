@@ -173,6 +173,24 @@ const DashboardContainer = styled.div`
     padding: 24px;
     height: 100%;
     overflow-y: auto;
+
+    &::-webkit-scrollbar {
+        width: 8px;
+    }
+
+    &::-webkit-scrollbar-track {
+        background: ${({ theme }) => theme.colors.background};
+        border-radius: 4px;
+    }
+
+    &::-webkit-scrollbar-thumb {
+        background: ${({ theme }) => theme.colors.border};
+        border-radius: 4px;
+
+        &:hover {
+            background: ${({ theme }) => theme.colors.text2};
+        }
+    }
 `;
 
 const DashboardHeader = styled.div`
@@ -253,6 +271,35 @@ const Button = styled.button`
 const UsersTable = styled.table`
     width: 100%;
     border-collapse: collapse;
+
+    display: block;
+    max-height: calc(100vh - 300px);
+    overflow-y: auto;
+
+    &::-webkit-scrollbar {
+        width: 8px;
+    }
+
+    &::-webkit-scrollbar-track {
+        background: ${({ theme }) => theme.colors.background};
+        border-radius: 4px;
+    }
+
+    &::-webkit-scrollbar-thumb {
+        background: ${({ theme }) => theme.colors.border};
+        border-radius: 4px;
+
+        &:hover {
+            background: ${({ theme }) => theme.colors.text2};
+        }
+    }
+
+    thead {
+        position: sticky;
+        top: 0;
+        background: white;
+        z-index: 1;
+    }
 
     th,
     td {
