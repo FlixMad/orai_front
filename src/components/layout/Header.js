@@ -1,15 +1,102 @@
-import React, { useContext } from "react";
+import styled from "styled-components";
 import { useLocation } from "react-router-dom";
 import { useSidebar } from "../../context/SidebarContext";
-import { login } from "../../context/UserContext"; // UserContext import
 
-// styled-components 임포트
-import { HeaderContainer, PageTitle, UserProfile } from "./styled"; // styled.js에 정의된 컴포넌트들
+const HeaderContainer = styled.header`
+  height: 6vh;
+  background-color: ${({ theme }) => theme.colors.background2};
+  border-bottom: 1px solid ${(props) => props.theme.colors.border};
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  position: fixed;
+  top: 2vh;
+  right: 2vw;
+  left: 2vw;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  backdrop-filter: blur(8px);
+  transition: all 0.3s ease;
+
+  &:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  }
+`;
+
+const PageTitle = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 16px;
+
+  .menu-icon {
+    width: 20px;
+    height: 20px;
+    opacity: 0.7;
+    transition: opacity 0.2s ease;
+    cursor: pointer;
+
+    &:hover {
+      opacity: 1;
+    }
+  }
+
+  .page-icon {
+    width: 24px;
+    height: 24px;
+    opacity: 0.9;
+  }
+
+  span {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: ${({ theme }) => theme.colors.text};
+  }
+`;
+
+const UserProfile = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px;
+  border-radius: 8px;
+  transition: background-color 0.2s ease;
+  cursor: pointer;
+
+  &:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+  }
+
+  span {
+    font-weight: 600;
+    color: ${({ theme }) => theme.colors.text};
+  }
+
+  div {
+    font-size: 13px;
+    color: ${({ theme }) => theme.colors.primary};
+    background-color: ${({ theme }) => `${theme.colors.primary}15`};
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-weight: 500;
+  }
+
+  img {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 2px solid ${({ theme }) => theme.colors.border};
+    transition: transform 0.2s ease;
+
+    &:hover {
+      transform: scale(1.05);
+    }
+  }
+`;
 
 const Header = () => {
   const location = useLocation();
   const { toggleSidebar, isOpen } = useSidebar();
-  const { name, profile } = useContext(login); // UserContext에서 name과 profile을 가져옵니다.
 
   const getPageInfo = () => {
     switch (location.pathname) {
@@ -53,9 +140,9 @@ const Header = () => {
         <span>{pageInfo.text}</span>
       </PageTitle>
       <UserProfile>
-        <span>{name || "사용자"}</span> {/* name을 표시, 없으면 기본값 "사용자" */}
-        <div>팀장</div> {/* 여기서 팀장 정보도 필요하면 추가 가능 */}
-        <img src={profile || "/images/profile/user-avatar.png"} alt="User Avatar" />
+        <span>오승준</span>
+        <div>팀장</div>
+        <img src="/images/profile/user-avatar.png" alt="User Avatar" />
       </UserProfile>
     </HeaderContainer>
   );
