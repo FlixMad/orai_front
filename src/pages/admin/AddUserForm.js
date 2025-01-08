@@ -9,8 +9,13 @@ import {
     FaBriefcase,
     FaImage,
 } from "react-icons/fa";
+import axiosInstance from "../../configs/axios-config";
+import { API_BASE_URL, USER } from "../../configs/host-config";
+import { handleAxiosError } from "../../configs/HandleAxiosError";
+import { useNavigate } from "react-router-dom";
 
 const AddUserForm = ({ onBack, editUser = null }) => {
+    const navigate = useNavigate();
     const [formData, setFormData] = useState({
         email: editUser?.email || "",
         password: "",
@@ -29,20 +34,69 @@ const AddUserForm = ({ onBack, editUser = null }) => {
         });
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        if (editUser) {
-            // 수정 로직 구현
-            console.log("수정된 데이터:", formData);
-        } else {
-            // 추가 로직 구현
-            console.log("새로운 데이터:", formData);
+
+        try {
+            const formDataToSend = new FormData();
+
+            // FormData에 값들을 추가 (비어있지 않은 값만)
+            Object.keys(formData).forEach((key) => {
+                if (
+                    formData[key] !== null &&
+                    formData[key] !== "" &&
+                    key !== "password"
+                ) {
+                    formDataToSend.append(key, formData[key]);
+                }
+            });
+
+            if (editUser) {
+                // 수정 요청
+                formDataToSend.append("userId", editUser.id); // 사용자 ID 추가
+
+                await axiosInstance.put(
+                    `${API_BASE_URL}${USER}/api/admin/users/info`,
+                    formDataToSend,
+                    {
+                        headers: {
+                            "Content-Type": "multipart/form-data",
+                        },
+                    }
+                );
+
+                alert("사용자 정보가 성공적으로 수정되었습니다.");
+            } else {
+                // 추가 요청
+                await axiosInstance.post(
+                    `${API_BASE_URL}${USER}/api/admin/users`,
+                    formDataToSend,
+                    {
+                        headers: {
+                            "Content-Type": "multipart/form-data",
+                        },
+                    }
+                );
+
+                alert("사용자가 성공적으로 추가되었습니다.");
+            }
+            onBack(); // 모달 닫기
+        } catch (err) {
+            handleAxiosError(err, () => {}, navigate);
+            alert(
+                editUser
+                    ? "사용자 수정에 실패했습니다."
+                    : "사용자 추가에 실패했습니다."
+            );
         }
     };
 
     return (
         <ModalOverlay onClick={onBack}>
-            <FormContainer onClick={(e) => e.stopPropagation()}>
+            <FormContainer
+                onClick={(e) => e.stopPropagation()}
+                onSubmit={handleSubmit}
+            >
                 <BackButton onClick={onBack}>&times;</BackButton>
                 <h2>{editUser ? "사용자 수정" : "사용자 추가"}</h2>
                 <FormField>
