@@ -1,6 +1,7 @@
 import styled from "styled-components";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom"; // useNavigate 추가
 import { useSidebar } from "../../context/SidebarContext";
+import { useEffect, useState } from "react";
 
 const HeaderContainer = styled.header`
   height: 6vh;
@@ -44,7 +45,6 @@ const PageTitle = styled.div`
   .page-icon {
     width: 24px;
     height: 24px;
-    opacity: 0.9;
   }
 
   span {
@@ -96,7 +96,45 @@ const UserProfile = styled.div`
 
 const Header = () => {
   const location = useLocation();
+  const navigate = useNavigate(); // useNavigate 훅 사용
   const { toggleSidebar, isOpen } = useSidebar();
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchUserData = async () => {
+      const token = localStorage.getItem("ACCESS_TOKEN");
+      if (!token) {
+        setError("로그인이 필요합니다.");
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const response = await fetch("http://localhost:8181/user-service/api/users/me", {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error("데이터 로드 실패");
+        }
+
+        const data = await response.json();
+        setUser(data);
+      } catch (error) {
+        setError("회원 정보 조회 중 오류가 발생했습니다.");
+        console.error("User data fetch error:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUserData();
+  }, []);
 
   const getPageInfo = () => {
     switch (location.pathname) {
@@ -139,11 +177,22 @@ const Header = () => {
         <img src={pageInfo.icon} alt={pageInfo.text} className="page-icon" />
         <span>{pageInfo.text}</span>
       </PageTitle>
-      <UserProfile>
-        <span>오승준</span>
-        <div>팀장</div>
-        <img src="/images/profile/user-avatar.png" alt="User Avatar" />
-      </UserProfile>
+      {loading ? (
+        <div>Loading...</div>
+      ) : error ? (
+        <div>{error}</div>
+      ) : user ? (
+        <UserProfile onClick={() => navigate("/profile")}> {/* 클릭 시 navigate */}
+          <span>{user.name}</span>
+          <div>{user.position}</div>
+          <img
+            src={`http://localhost:8181/user-service/api/users/profileImage/${user.profileImage}`}
+            alt="User Avatar"
+          />
+        </UserProfile>
+      ) : (
+        <div>회원 정보 로드 실패</div>
+      )}
     </HeaderContainer>
   );
 };

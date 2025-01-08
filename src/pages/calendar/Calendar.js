@@ -223,7 +223,9 @@ const Calendar = () => {
         console.error("Invalid response format:", response);
       }
     } catch (error) {
-      handleAxiosError(error, () => {}, navigate);
+      handleAxiosError(error, () => {
+        localStorage.clear(); // 로그아웃 시 로컬 스토리지 클리어
+      }, navigate);
     }
   };
 
