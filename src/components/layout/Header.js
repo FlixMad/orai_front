@@ -1,6 +1,6 @@
-import styled from "styled-components";
-import { useLocation } from "react-router-dom";
-import { useSidebar } from "../../context/SidebarContext";
+import styled from 'styled-components';
+import { useLocation } from 'react-router-dom';
+import { useSidebar } from '../../context/SidebarContext';
 
 const HeaderContainer = styled.header`
   height: 6vh;
@@ -99,29 +99,31 @@ const Header = () => {
   const { toggleSidebar, isOpen } = useSidebar();
 
   const getPageInfo = () => {
+    if (location.pathname.startsWith('/chat')) {
+      return { icon: '/images/icons/chat.png', text: '채팅방' };
+    }
+
     switch (location.pathname) {
-      case "/notifications":
-        return { icon: "/images/icons/bell.png", text: "알림" };
-      case "/calendar":
-        return { icon: "/images/icons/calendar.png", text: "캘린더" };
-      case "/chat":
-        return { icon: "/images/icons/chat.png", text: "채팅방" };
-      case "/organization":
-        return { icon: "/images/icons/organization.png", text: "조직도" };
-      case "/emergency":
-        return { icon: "/images/icons/emergency.png", text: "비상연락망" };
-      case "/profile":
-        return { icon: "/images/icons/profile.png", text: "프로필" };
-      case "/area":
-        return { icon: "/images/icons/vacation.png", text: "연차관리" };
-      case "/admin/dashboard":
-        return { icon: "/images/icons/admin.png", text: "관리자 대시보드" };
-      case "/admin/users":
-        return { icon: "/images/icons/users.png", text: "사용자 관리" };
-      case "/admin/organization":
-        return { icon: "/images/icons/org-manage.png", text: "조직 관리" };
+      case '/notifications':
+        return { icon: '/images/icons/bell.png', text: '알림' };
+      case '/calendar':
+        return { icon: '/images/icons/calendar.png', text: '캘린더' };
+      case '/organization':
+        return { icon: '/images/icons/organization.png', text: '조직도' };
+      case '/emergency':
+        return { icon: '/images/icons/emergency.png', text: '비상연락망' };
+      case '/profile':
+        return { icon: '/images/icons/profile.png', text: '프로필' };
+      case '/area':
+        return { icon: '/images/icons/vacation.png', text: '연차관리' };
+      case '/admin/dashboard':
+        return { icon: '/images/icons/admin.png', text: '관리자 대시보드' };
+      case '/admin/users':
+        return { icon: '/images/icons/users.png', text: '사용자 관리' };
+      case '/admin/organization':
+        return { icon: '/images/icons/org-manage.png', text: '조직 관리' };
       default:
-        return { icon: "/images/icons/home.png", text: "홈" };
+        return { icon: '/images/icons/home.png', text: '홈' };
     }
   };
 
