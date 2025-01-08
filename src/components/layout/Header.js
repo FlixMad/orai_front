@@ -1,5 +1,5 @@
 import styled from "styled-components";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom"; // useNavigate 추가
 import { useSidebar } from "../../context/SidebarContext";
 import { useEffect, useState } from "react";
 
@@ -96,6 +96,7 @@ const UserProfile = styled.div`
 
 const Header = () => {
   const location = useLocation();
+  const navigate = useNavigate(); // useNavigate 훅 사용
   const { toggleSidebar, isOpen } = useSidebar();
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -103,7 +104,7 @@ const Header = () => {
 
   useEffect(() => {
     const fetchUserData = async () => {
-      const token = localStorage.getItem("ACCESS_TOKEN"); // ACCESS_TOKEN으로 수정
+      const token = localStorage.getItem("ACCESS_TOKEN");
       if (!token) {
         setError("로그인이 필요합니다.");
         setLoading(false);
@@ -114,7 +115,7 @@ const Header = () => {
         const response = await fetch("http://localhost:8181/user-service/api/users/me", {
           method: "GET",
           headers: {
-            Authorization: `Bearer ${token}`, // ACCESS_TOKEN을 Authorization 헤더에 포함
+            Authorization: `Bearer ${token}`,
           },
         });
 
@@ -133,7 +134,7 @@ const Header = () => {
     };
 
     fetchUserData();
-  }, []); // useEffect가 한 번만 실행되도록 설정
+  }, []);
 
   const getPageInfo = () => {
     switch (location.pathname) {
@@ -177,11 +178,11 @@ const Header = () => {
         <span>{pageInfo.text}</span>
       </PageTitle>
       {loading ? (
-        <div>Loading...</div> // 로딩 중 표시
+        <div>Loading...</div>
       ) : error ? (
-        <div>{error}</div> // 오류 처리
+        <div>{error}</div>
       ) : user ? (
-        <UserProfile>
+        <UserProfile onClick={() => navigate("/profile")}> {/* 클릭 시 navigate */}
           <span>{user.name}</span>
           <div>{user.position}</div>
           <img
@@ -190,7 +191,7 @@ const Header = () => {
           />
         </UserProfile>
       ) : (
-        <div>회원 정보 로드 실패</div> // 회원 정보 로드 실패 시 메시지
+        <div>회원 정보 로드 실패</div>
       )}
     </HeaderContainer>
   );
