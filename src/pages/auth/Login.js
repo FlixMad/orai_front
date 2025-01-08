@@ -60,7 +60,7 @@ const Login = () => {
     <LoginContainer>
       <LoginBox>
         <LogoSection>
-          <LogoImage src="/images/orai-logo.png" alt="Charlie's Factory" />
+          <LogoImage src="/images/factory-logo.png" alt="Charlie's Factory" />
           <LogoText>CHARLIE's FACTORY</LogoText>
         </LogoSection>
 
@@ -94,14 +94,14 @@ const LoginContainer = styled.div`
   justify-content: center;
   align-items: center;
   min-height: 100vh;
-  background-color: #dae5da;
+  background-color:#F7F9F9;
 `;
 
 const LoginBox = styled.div`
   width: 100%;
   max-width: 400px;
   padding: 40px 20px;
-  background-color: white;
+  background-color:#CDDECB;
   border-radius: 10px;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
 `;
@@ -139,7 +139,7 @@ const Input = styled.input`
 
 const LoginButton = styled.button`
   padding: 15px;
-  background-color: #9cb99c;
+  background-color: #9CC97F;
   color: white;
   border: none;
   border-radius: 5px;
@@ -153,8 +153,8 @@ const LoginButton = styled.button`
 `;
 
 const LogoImage = styled.img`
-  width: 60px;
-  height: 60px;
+  width: 100px;
+  height: 100px;
   margin-bottom: 10px;
 `;
 
