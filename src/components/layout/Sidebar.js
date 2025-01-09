@@ -1,6 +1,7 @@
 import styled from "styled-components";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useSidebar } from "../../context/SidebarContext";
+import { useState, useEffect } from "react";
 
 const SidebarContainer = styled.div`
     width: ${(props) => props.theme.sidebar.width};
@@ -110,6 +111,14 @@ const Sidebar = () => {
     const { isOpen } = useSidebar();
     const location = useLocation();
     const navigate = useNavigate();
+    const [showAdminDashboard, setShowAdminDashboard] = useState(false);
+
+    useEffect(() => {
+        const departmentId = localStorage.getItem("departmentId");
+        if (departmentId) {
+            setShowAdminDashboard(departmentId === "team9");
+        }
+    }, []);
 
     const handleNavigation = (path) => {
         navigate(path);
@@ -181,14 +190,16 @@ const Sidebar = () => {
                     연차관리
                     <img src="/images/icons/arrow-right.png" alt="화살표" />
                 </StyledLink>
-                <StyledLink
-                    onClick={() => handleNavigation("/admin/dashboard")}
-                    $active={location.pathname.startsWith("/admin")}
-                >
-                    <img src="/images/icons/admin.png" alt="관리자" />
-                    관리자 대시보드
-                    <img src="/images/icons/arrow-right.png" alt="화살표" />
-                </StyledLink>
+                {showAdminDashboard && (
+                    <StyledLink
+                        onClick={() => handleNavigation("/admin/dashboard")}
+                        $active={location.pathname.startsWith("/admin")}
+                    >
+                        <img src="/images/icons/admin.png" alt="관리자" />
+                        관리자 대시보드
+                        <img src="/images/icons/arrow-right.png" alt="화살표" />
+                    </StyledLink>
+                )}
             </NavLinks>
 
             <FooterLogo>
