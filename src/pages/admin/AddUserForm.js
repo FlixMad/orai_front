@@ -44,8 +44,8 @@ const AddUserForm = ({ onBack, editUser = null }) => {
             Object.keys(formData).forEach((key) => {
                 if (
                     formData[key] !== null &&
-                    formData[key] !== "" &&
-                    key !== "password"
+                    formData[key] !== ""
+                    //&& key !== "password"
                 ) {
                     formDataToSend.append(key, formData[key]);
                 }
