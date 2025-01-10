@@ -44,12 +44,50 @@ const Profile = () => {
 
   const handleWorkStart = () => {
     setIsWorking(true);
-    // API 호출: 출근 시간 기록
+    const token = localStorage.getItem("ACCESS_TOKEN");
+
+    // 출근 API 호출
+    fetch("http://localhost:8181/user-service/api/attitude/checkin", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${token}`, // 토큰을 Authorization 헤더에 추가
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        userId: user.userId, // 필요에 따라 사용자 ID나 기타 필요한 데이터 추가
+      }),
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        console.log("출근 시간 기록 성공", data);
+      })
+      .catch((error) => {
+        console.error("출근 시간 기록 실패:", error);
+      });
   };
 
   const handleWorkEnd = () => {
     setIsWorking(false);
-    // API 호출: 퇴근 시간 기록
+    const token = localStorage.getItem("ACCESS_TOKEN");
+
+    // 퇴근 API 호출
+    fetch("http://localhost:8181/user-service/api/attitude/checkout", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${token}`, // 토큰을 Authorization 헤더에 추가
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        userId: user.userId, // 필요에 따라 사용자 ID나 기타 필요한 데이터 추가
+      }),
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        console.log("퇴근 시간 기록 성공", data);
+      })
+      .catch((error) => {
+        console.error("퇴근 시간 기록 실패:", error);
+      });
   };
 
   const handleStatusChange = (status) => {
@@ -94,7 +132,7 @@ const Profile = () => {
             </ActionButton>
           )}
         </WorkActions>
-        </ProfileHeader>
+      </ProfileHeader>
 
       <ContentGrid>
         <Section>
