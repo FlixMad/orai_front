@@ -206,7 +206,10 @@ const Calendar = () => {
   const fetchEvents = async () => {
     try {
       const response = await axiosInstance.get(
-        `${API_BASE_URL}${CALENDAR}/api/schedules`
+        `${API_BASE_URL}${CALENDAR}/api/schedules`,
+        {
+          responseType: "json",
+        }
       );
       console.log("Response:", response);
 
@@ -223,9 +226,13 @@ const Calendar = () => {
         console.error("Invalid response format:", response);
       }
     } catch (error) {
-      handleAxiosError(error, () => {
-        localStorage.clear(); // 로그아웃 시 로컬 스토리지 클리어
-      }, navigate);
+      handleAxiosError(
+        error,
+        () => {
+          localStorage.clear(); // 로그아웃 시 로컬 스토리지 클리어
+        },
+        navigate
+      );
     }
   };
 
@@ -300,10 +307,17 @@ const Calendar = () => {
         updatedEvent
       );
 
-      if (response && response.data) {
+      if (response && response.data && response.data.scheduleId) {
         setEvents(
           events.map((event) =>
-            event.id === scheduleId ? response.data : event
+            event.id === scheduleId
+              ? {
+                  id: scheduleId,
+                  title: response.data.title,
+                  start: response.data.start,
+                  end: response.data.end,
+                }
+              : event
           )
         );
         setShowModal(false);
