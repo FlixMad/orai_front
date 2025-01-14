@@ -1,9 +1,15 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import styled from "styled-components";
 import { useNavigate } from "react-router-dom";
+import { API_BASE_URL, USER } from "../../configs/host-config";
 
 const Profile = () => {
   const navigate = useNavigate();
+  const [user, setUser] = useState({
+    name: "오승준", // 기본값 설정
+    position: "팀장 | 개발팀", // 기본값 설정
+    profileImage: "/images/profile/user-avatar.png", // 기본값 설정
+  });
   const [workStatus, setWorkStatus] = useState("업무 중");
   const [isWorking, setIsWorking] = useState(false);
   const [showStatusModal, setShowStatusModal] = useState(false);
@@ -17,14 +23,72 @@ const Profile = () => {
     "재택 근무 중",
   ];
 
+  useEffect(() => {
+    // ACCESS_TOKEN을 사용해 유저 정보 가져오기
+    fetch(`${API_BASE_URL}/user-service/api/users/me`, {
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem("ACCESS_TOKEN")}`,
+      },
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        setUser({
+          name: data.name,
+          position: `${data.position} | ${data.departmentId}`, // 부서 정보 포함
+          profileImage: data.profileImage || "/images/profile/user-avatar.png",
+        });
+      })
+      .catch((error) => {
+        console.error("사용자 정보 가져오기 실패:", error);
+      });
+  }, []); // 컴포넌트 마운트 시에만 호출
+
   const handleWorkStart = () => {
     setIsWorking(true);
-    // API 호출: 출근 시간 기록
+    const token = localStorage.getItem("ACCESS_TOKEN");
+
+    // 출근 API 호출
+    fetch(`${API_BASE_URL}/user-service/api/attitude/checkin`, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${token}`, // 토큰을 Authorization 헤더에 추가
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        userId: user.userId, // 필요에 따라 사용자 ID나 기타 필요한 데이터 추가
+      }),
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        console.log("출근 시간 기록 성공", data);
+      })
+      .catch((error) => {
+        console.error("출근 시간 기록 실패:", error);
+      });
   };
 
   const handleWorkEnd = () => {
     setIsWorking(false);
-    // API 호출: 퇴근 시간 기록
+    const token = localStorage.getItem("ACCESS_TOKEN");
+
+    // 퇴근 API 호출
+    fetch(`${API_BASE_URL}/user-service/api/attitude/checkout`, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${token}`, // 토큰을 Authorization 헤더에 추가
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        userId: user.userId, // 필요에 따라 사용자 ID나 기타 필요한 데이터 추가
+      }),
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        console.log("퇴근 시간 기록 성공", data);
+      })
+      .catch((error) => {
+        console.error("퇴근 시간 기록 실패:", error);
+      });
   };
 
   const handleStatusChange = (status) => {
@@ -44,12 +108,12 @@ const Profile = () => {
       <ProfileHeader>
         <UserInfo>
           <UserAvatar>
-            <img src="/images/profile/user-avatar.png" alt="프로필 사진" />
+            <img src={user.profileImage} alt="프로필 사진" />
             <StatusBadge status={workStatus} />
           </UserAvatar>
           <UserDetails>
-            <h2>오승준</h2>
-            <Position>팀장 | 개발팀</Position>
+            <h2>{user.name}</h2>
+            <Position>{user.position}</Position>
             <StatusButton onClick={() => setShowStatusModal(true)}>
               {workStatus}
               <img src="/images/icons/arrow-down.png" alt="상태 변경" />
