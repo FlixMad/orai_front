@@ -100,7 +100,7 @@ const ChatList = ({ className }) => {
     } catch (error) {
       setName('');
       console.error('채팅방 수정 실패:', error);
-      alert('채팅방 수정에 실패했습니다.');
+      alert('수정 권한이 없습니다.');
     }
   };
 
@@ -119,7 +119,7 @@ const ChatList = ({ className }) => {
       }
     } catch (error) {
       console.error('채팅방 삭제 실패:', error);
-      alert('채팅방 삭제에 실패했습니다.');
+      alert('삭제 권한이 없습니다.');
     }
   };
 
