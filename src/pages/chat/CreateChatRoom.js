@@ -6,10 +6,24 @@ import { API_BASE_URL, CHAT } from '../../configs/host-config';
 const CreateChatRoom = ({ onChatRoomCreated }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [name, setName] = useState('');
+  const [image, setImage] = useState('');
 
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setName(''); // 입력창 초기화
+    setImage(null);
+  };
+
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        // 5MB 제한
+        alert('파일 크기는 5MB 이하여야 합니다.');
+        return;
+      }
+      setImage(file);
+    }
   };
 
   const handleCreateRoom = async () => {
@@ -18,18 +32,30 @@ const CreateChatRoom = ({ onChatRoomCreated }) => {
       if (!name.trim()) {
         setName('');
         alert('채팅방 이름을 입력해주세요.');
-        document.querySelector('input').focus();
         return;
+      }
+
+      // FormData 객체 생성
+      const formData = new FormData();
+      formData.append('name', name);
+      if (image) {
+        formData.append('image', image);
       }
 
       const response = await axiosInstance.post(
         `${API_BASE_URL}${CHAT}/createChatRoom`,
-        name
+        formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        }
       );
 
       if (response.status === 200) {
         const { result } = response.data;
         setName('');
+        setImage(null);
         alert('채팅방이 생성되었습니다.');
         setIsModalOpen(false);
         console.log('생성된 채팅방 정보:', result);
@@ -39,8 +65,8 @@ const CreateChatRoom = ({ onChatRoomCreated }) => {
     } catch (error) {
       console.error('채팅방 생성 실패:', error);
       setName('');
+      setImage(null);
       alert('채팅방 생성에 실패했습니다. 다시 시도해주세요.');
-      document.querySelector('input').focus();
     }
   };
 
@@ -60,6 +86,25 @@ const CreateChatRoom = ({ onChatRoomCreated }) => {
         <Modal>
           <ModalContent>
             <ModalTitle>새 채팅방 만들기</ModalTitle>
+            <ImageInputWrapper>
+              <ImagePreview>
+                {image ? (
+                  <img
+                    src={URL.createObjectURL(image)}
+                    alt="채팅방 이미지 미리보기"
+                  />
+                ) : (
+                  <img src="/images/icons/factory.png" alt="기본 이미지" />
+                )}
+              </ImagePreview>
+              <ImageInput
+                type="file"
+                accept="image/*"
+                onChange={handleImageChange}
+                id="createRoomImage"
+              />
+              <ImageLabel htmlFor="createRoomImage">이미지 선택</ImageLabel>
+            </ImageInputWrapper>
             <Input
               type="text"
               placeholder="채팅방 이름을 입력하세요"
@@ -195,6 +240,45 @@ const ConfirmButton = styled(Button)`
 
   &:hover {
     background: ${({ theme }) => theme.colors.secondary1};
+  }
+`;
+
+const ImageInputWrapper = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 20px;
+`;
+
+const ImagePreview = styled.div`
+  width: 100px;
+  height: 100px;
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 10px;
+  border: 2px solid ${({ theme }) => theme.colors.border};
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+`;
+
+const ImageInput = styled.input`
+  display: none;
+`;
+
+const ImageLabel = styled.label`
+  padding: 8px 16px;
+  background: ${({ theme }) => theme.colors.background2};
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  color: ${({ theme }) => theme.colors.text1};
+
+  &:hover {
+    background: ${({ theme }) => theme.colors.background1};
   }
 `;
 
