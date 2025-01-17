@@ -92,15 +92,24 @@ const Login = () => {
 
                 {isMfaRequired ? (
     <Form onSubmit={handleMfaSubmit}>
-        {/* QR 코드 생성 */}
-        <QRCodeCanvas value={`otpauth://totp/YourAppName:${formData.email}?secret=${mfaSecret}&issuer=YourAppName`} size={256} />
+        <EmailInfo>연동 해야할 이메일: {formData.email}</EmailInfo>
+        <QRCodeContainer>
+            <QRCodeCanvas 
+                value={`otpauth://totp/YourAppName:${formData.email}?secret=${mfaSecret}&issuer=YourAppName`} 
+                size={256} 
+            />
+            <QRDescription>
+                구글어센티케이터를 실행하고 큐알코드 스캔해주십쇼!
+            </QRDescription>
+        </QRCodeContainer>
         <Input
             type="text"
             name="mfaCode"
-            placeholder="Enter MFA Code"
+            placeholder="이메일과 연동된 6자리 숫자를 입력하세요"
             value={mfaCode}
             onChange={handleMfaChange}
             required
+            maxLength="6"
         />
         {errorMessage && <ErrorMessage>{errorMessage}</ErrorMessage>}
         <LoginButton type="submit">MFA 인증</LoginButton>
@@ -207,6 +216,28 @@ const ErrorMessage = styled.p`
     text-align: center;
     font-size: 14px;
     margin: -10px 0 10px 0;
+`;
+
+const EmailInfo = styled.div`
+    text-align: center;
+    margin-bottom: 20px;
+    color: #333;
+    font-size: 16px;
+    font-weight: 500;
+`;
+
+const QRCodeContainer = styled.div`
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 20px;
+`;
+
+const QRDescription = styled.p`
+    text-align: center;
+    color: #333;
+    font-size: 14px;
+    margin: 10px 0 0 0;
 `;
 
 export default Login;
