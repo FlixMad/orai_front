@@ -44,10 +44,7 @@ const Login = () => {
                 setMfaSecret(secret); // MFA secret 값 설정
                 setIsMfaRequired(true); // MFA 인증 필요 상태로 설정
     
-                // MFA QR 코드 생성 URL을 위한 otpauth:// URI 형식 만들기
-                const otpauthUri = `otpauth://totp/YourAppName:${formData.email}?secret=${secret}&issuer=YourAppName`;
-                // QR 코드 생성 (URI는 그대로 두고 secret을 사용)
-                setMfaSecret(secret); // URI가 아닌 실제 secret 값만 사용
+                // QR 코드 생성 (URI를 직접 QR 코드 생성에 사용)
             } else {
                 navigate("/dashboard"); // MFA 필요 없으면 바로 대시보드로 이동
             }
@@ -94,47 +91,46 @@ const Login = () => {
                 </LogoSection>
 
                 {isMfaRequired ? (
-                    <Form onSubmit={handleMfaSubmit}>
-                        {/* QR 코드 생성 */}
-                        <QRCodeCanvas value={`otpauth://totp/YourAppName:${formData.email}?secret=${mfaSecret}&issuer=YourAppName`} size={256} />
-                        <Input
-                            type="text"
-                            name="mfaCode"
-                            placeholder="Enter MFA Code"
-                            value={mfaCode}
-                            onChange={handleMfaChange}
-                            required
-                        />
-                        {errorMessage && <ErrorMessage>{errorMessage}</ErrorMessage>}
-                        <LoginButton type="submit">MFA 인증</LoginButton>
-                    </Form>
-                ) : (
-                    <Form onSubmit={handleSubmit}>
-                        <Input
-                            type="email"
-                            name="email"
-                            placeholder="Email"
-                            value={formData.email}
-                            onChange={handleChange}
-                            required
-                        />
-                        <Input
-                            type="password"
-                            name="password"
-                            placeholder="Password"
-                            value={formData.password}
-                            onChange={handleChange}
-                            required
-                        />
-                        {errorMessage && <ErrorMessage>{errorMessage}</ErrorMessage>}
-                        <LoginButton type="submit">로그인</LoginButton>
-                    </Form>
-                )}
+    <Form onSubmit={handleMfaSubmit}>
+        {/* QR 코드 생성 */}
+        <QRCodeCanvas value={`otpauth://totp/YourAppName:${formData.email}?secret=${mfaSecret}&issuer=YourAppName`} size={256} />
+        <Input
+            type="text"
+            name="mfaCode"
+            placeholder="Enter MFA Code"
+            value={mfaCode}
+            onChange={handleMfaChange}
+            required
+        />
+        {errorMessage && <ErrorMessage>{errorMessage}</ErrorMessage>}
+        <LoginButton type="submit">MFA 인증</LoginButton>
+    </Form>
+) : (
+    <Form onSubmit={handleSubmit}>
+        <Input
+            type="email"
+            name="email"
+            placeholder="Email"
+            value={formData.email}
+            onChange={handleChange}
+            required
+        />
+        <Input
+            type="password"
+            name="password"
+            placeholder="Password"
+            value={formData.password}
+            onChange={handleChange}
+            required
+        />
+        {errorMessage && <ErrorMessage>{errorMessage}</ErrorMessage>}
+        <LoginButton type="submit">로그인</LoginButton>
+    </Form>
+)}
             </LoginBox>
         </LoginContainer>
     );
 };
-
 
 
 const LoginContainer = styled.div`
