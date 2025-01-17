@@ -1,99 +1,243 @@
 import styled from "styled-components";
+import { useEffect, useState, useRef } from "react";
+import Mermaid from "mermaid";
+import Panzoom from "@panzoom/panzoom";
+import { API_BASE_URL, CALENDAR } from "../../configs/host-config";
+import { axiosInstance } from "../../configs/axios-config";
 
 const Organization = () => {
-  return (
-    <Container>
-      <OrgChart>
-        <Department>
-          <DepartmentHeader>
-            <Title>개발팀</Title>
-            <Count>12명</Count>
-          </DepartmentHeader>
-          <MemberList>
-            <MemberCard>
-              <ProfileImage
-                src="/images/profile/user-avatar.png"
-                alt="프로필"
-              />
-              <Info>
-                <Name>오승준</Name>
-                <Position>팀장</Position>
-              </Info>
-            </MemberCard>
-          </MemberList>
-        </Department>
-      </OrgChart>
-    </Container>
-  );
+    const [departments, setDepartments] = useState([]);
+    const chartRef = useRef(null);
+    const panzoomRef = useRef(null);
+
+    useEffect(() => {
+        const initPanzoom = () => {
+            if (chartRef.current && !panzoomRef.current) {
+                const element = chartRef.current;
+                panzoomRef.current = Panzoom(element, {
+                    maxScale: 2,
+                    minScale: 0.5,
+                    startScale: 0.8,
+                });
+
+                // 휠 이벤트 처리
+                element.addEventListener(
+                    "wheel",
+                    panzoomRef.current.zoomWithWheel
+                );
+            }
+        };
+
+        const renderChart = async () => {
+            try {
+                await Mermaid.initialize({
+                    startOnLoad: false,
+                    theme: "default",
+                    securityLevel: "loose",
+                    flowchart: {
+                        htmlLabels: true,
+                        curve: "basis",
+                    },
+                });
+
+                const response = await axiosInstance.get(
+                    `${API_BASE_URL}${CALENDAR}/api/departments`
+                );
+                const data = response.data;
+
+                if (data.statusCode === 200) {
+                    setDepartments(data.result);
+                    const mermaidDefinition = generateMermaidDefinition(
+                        data.result
+                    );
+                    const element = document.querySelector("#orgChart");
+
+                    if (element) {
+                        const { svg } = await Mermaid.render(
+                            "orgChart-" + Date.now(),
+                            mermaidDefinition
+                        );
+                        element.innerHTML = svg;
+                        setTimeout(initPanzoom, 100);
+                    }
+                }
+            } catch (error) {
+                console.error("조직도 렌더링 실패:", error);
+            }
+        };
+
+        renderChart();
+
+        return () => {
+            if (panzoomRef.current) {
+                panzoomRef.current.destroy();
+            }
+        };
+    }, []);
+
+    const generateMermaidDefinition = (departments) => {
+        let definition = `
+            flowchart TD
+            %% 방향 설정
+            direction TB
+            
+            %% 스타일 클래스 정의
+            classDef root fill:#122B1D,color:#fff,stroke:#122B1D,stroke-width:2px
+            classDef division fill:#537E72,color:#fff,stroke:#537E72,stroke-width:1px
+            classDef group fill:#9CC97F,color:#fff,stroke:#9CC97F,stroke-width:1px
+            classDef team fill:#90B7BF,color:#fff,stroke:#90B7BF,stroke-width:1px
+            
+            %% 루트 노드
+            root["<div class='node-content root-node'>
+                <div class='title'>Charlie's Factory</div>
+                <div class='subtitle'>전체 조직도</div>
+            </div>"]:::root
+            
+            %% 링크 스타일
+            linkStyle default stroke:#CDDECB,stroke-width:2px
+        `;
+
+        // 최상위 부서 (DIVISION)
+        departments
+            .filter((dept) => dept.parentId === "")
+            .forEach((dept) => {
+                definition += `
+                    ${dept.departmentId}["<div class='node-content division-node'>
+                        <div class='title'>${dept.departmentName}</div>
+                        <div class='type'>DIVISION</div>
+                    </div>"]:::division
+                    root --> ${dept.departmentId}
+                `;
+            });
+
+        // GROUP 부서
+        departments
+            .filter((dept) => dept.type === "GROUP")
+            .forEach((dept) => {
+                definition += `
+                    ${dept.departmentId}["<div class='node-content group-node'>
+                        <div class='title'>${dept.departmentName}</div>
+                        <div class='type'>GROUP</div>
+                    </div>"]:::group
+                    ${dept.parentId} --> ${dept.departmentId}
+                `;
+            });
+
+        // TEAM 부서
+        departments
+            .filter((dept) => dept.type === "TEAM")
+            .forEach((dept) => {
+                definition += `
+                    ${dept.departmentId}["<div class='node-content team-node'>
+                        <div class='title'>${dept.departmentName}</div>
+                        <div class='type'>TEAM</div>
+                    </div>"]:::team
+                    ${dept.parentId} --> ${dept.departmentId}
+                `;
+            });
+
+        return definition;
+    };
+
+    const nodeStyles = `
+        .node-content {
+            padding: 32px;
+            border-radius: 16px;
+            min-width: 400px;
+            text-align: center;
+        }
+        .node-content .title {
+            font-weight: 700;
+            font-size: 28px;
+            margin-bottom: 12px;
+        }
+        .node-content .subtitle,
+        .node-content .type {
+            font-size: 20px;
+            opacity: 0.9;
+            font-weight: 500;
+        }
+        .root-node {
+            background: #122B1D;
+            color: white;
+            padding: 40px;
+
+            .title {
+                font-size: 34px;
+                margin-bottom: 16px;
+            }
+            .subtitle {
+                font-size: 24px;
+            }
+        }
+        .division-node {
+            background: #537E72;
+            color: white;
+        }
+        .group-node {
+            background: #9CC97F;
+            color: white;
+        }
+        .team-node {
+            background: #90B7BF;
+            color: white;
+        }
+    `;
+
+    return (
+        <Container>
+            <ChartContainer>
+                <ChartWrapper ref={chartRef}>
+                    <div id="orgChart" />
+                </ChartWrapper>
+            </ChartContainer>
+            <style>{nodeStyles}</style>
+        </Container>
+    );
 };
 
 const Container = styled.div`
-  padding: 24px;
-  height: 100%;
+    padding: 24px;
+    height: 100%;
+    background: white;
+    position: relative;
 `;
 
-const OrgChart = styled.div`
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 24px;
+const ChartContainer = styled.div`
+    width: 100%;
+    height: calc(100vh - 100px);
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 40px;
+    background: ${({ theme }) => theme.colors.background2};
 `;
 
-const Department = styled.div`
-  background: white;
-  border-radius: 12px;
-  padding: 20px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-`;
+const ChartWrapper = styled.div`
+    background: ${({ theme }) => theme.colors.background};
+    padding: 100px;
+    border-radius: 16px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 
-const DepartmentHeader = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
-`;
+    #orgChart {
+        min-width: 2000px;
+        min-height: 1500px;
 
-const Title = styled.h3`
-  color: ${({ theme }) => theme.colors.text1};
-  font-weight: 600;
-`;
+        svg {
+            width: 100%;
+            height: 100%;
+            min-height: 1500px;
+        }
 
-const Count = styled.span`
-  color: ${({ theme }) => theme.colors.text2};
-  font-size: 14px;
-`;
+        .flowchart-link {
+            stroke-width: 4px;
+        }
 
-const MemberList = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-`;
-
-const MemberCard = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px;
-  border-radius: 8px;
-  background: ${({ theme }) => theme.colors.background2};
-`;
-
-const ProfileImage = styled.img`
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  border: 2px solid ${({ theme }) => theme.colors.primary};
-`;
-
-const Info = styled.div``;
-
-const Name = styled.div`
-  font-weight: 500;
-  color: ${({ theme }) => theme.colors.text1};
-`;
-
-const Position = styled.div`
-  font-size: 12px;
-  color: ${({ theme }) => theme.colors.text2};
+        .node {
+            margin: 40px 0;
+        }
+    }
 `;
 
 export default Organization;
