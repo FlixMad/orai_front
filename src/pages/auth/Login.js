@@ -96,7 +96,7 @@ const Login = () => {
                 {isMfaRequired ? (
                     <Form onSubmit={handleMfaSubmit}>
                         {/* QR 코드 생성 */}
-                        <QRCodeCanvas value={`otpauth://totp/YourAppName:${formData.email}?secret=${mfaSecret}&issuer=YourAppName`} size={256} />
+                        <QRCodeCanvas value={`otpauth://totp/YourAppName:${formData.email}?secret=${mfaSecret}&issuer=YourAppName`} size={180} />
                         <Input
                             type="text"
                             name="mfaCode"
@@ -211,6 +211,5 @@ const ErrorMessage = styled.p`
     font-size: 14px;
     margin: -10px 0 10px 0;
 `;
-
 
 export default Login;
