@@ -27,10 +27,11 @@ const ChatList = ({ className }) => {
         `${API_BASE_URL}${CHAT}/chatRoomList`
       );
       if (response.status === 200) {
-        setChatRooms(response.data.result);
+        setChatRooms(response.data.result || []);
       }
     } catch (error) {
       console.error('채팅방 목록 조회 실패: ', error);
+      setChatRooms([]);
     }
   };
 
@@ -139,28 +140,30 @@ const ChatList = ({ className }) => {
       </ChatListHeader>
 
       <ChatRooms>
-        {chatRooms.map((room) => (
-          <ChatRoom
-            onClick={() => navigate(`/chat/${room.chatRoomId}`)}
-            active={currentChatId === `${room.chatRoomId}`}
-          >
-            <RoomIcon
-              onClick={(e) => {
-                e.stopPropagation();
-                setSelectedRoom(room);
-                setEditRoomName(room.name);
-                setIsManageModalOpen(true);
-              }}
+        {Array.isArray(chatRooms) &&
+          chatRooms.map((room) => (
+            <ChatRoom
+              key={room.chatRoomId}
+              onClick={() => navigate(`/chat/${room.chatRoomId}`)}
+              active={currentChatId === `${room.chatRoomId}`}
             >
-              <img src="/images/icons/factory.png" alt="채팅방 아이콘" />
-            </RoomIcon>
-            <RoomInfo>
-              <RoomTitle>{room.name}</RoomTitle>
-              <CreatedAt>{room.createdAt}</CreatedAt>
-            </RoomInfo>
-            <ChatRoomId>{room.chatRoomId}</ChatRoomId>
-          </ChatRoom>
-        ))}
+              <RoomIcon
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setSelectedRoom(room);
+                  setEditRoomName(room.name);
+                  setIsManageModalOpen(true);
+                }}
+              >
+                <img src="/images/icons/factory.png" alt="채팅방 아이콘" />
+              </RoomIcon>
+              <RoomInfo>
+                <RoomTitle>{room.name}</RoomTitle>
+                <CreatedAt>{room.createdAt}</CreatedAt>
+              </RoomInfo>
+              <ChatRoomId>{room.chatRoomId}</ChatRoomId>
+            </ChatRoom>
+          ))}
       </ChatRooms>
       <NewChatButton onClick={() => setIsModalOpen(true)}>
         <img src="/images/icons/plus-circle.png" alt="새 채팅방" />
