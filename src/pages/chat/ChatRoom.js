@@ -1,11 +1,11 @@
-import { useState } from "react";
-import styled from "styled-components";
+import { useState } from 'react';
+import styled from 'styled-components';
 // roomId를 나중에 사용할 예정이므로 주석 처리
 // import { useParams } from "react-router-dom";
 
 const ChatRoom = () => {
   // const { roomId } = useParams();  // 나중에 사용할 예정
-  const [message, setMessage] = useState("");
+  const [message, setMessage] = useState('');
 
   return (
     <ChatRoomContainer>
