@@ -218,20 +218,12 @@ const ChatList = ({ onChatRoomCreated }) => {
       }
 
       const formData = new FormData();
-      if (editRoomName) {
-        formData.append('name', editRoomName);
-        formData.append('image', selectedRoom.image);
-      } else {
-        formData.append('name', selectedRoom.name);
-        formData.append('image', selectedRoom.image);
-      }
+      formData.append('name', editRoomName.trim() || selectedRoom.name);
 
       if (editRoomImage && typeof editRoomImage !== 'string') {
-        formData.append('name', selectedRoom.name);
         formData.append('image', editRoomImage);
       } else {
-        const emptyImage = new Blob([], { type: 'application/octet-stream' });
-        formData.append('image', emptyImage);
+        formData.append('image', selectedRoom.image);
       }
 
       const response = await axiosInstance.put(
