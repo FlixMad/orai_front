@@ -227,6 +227,7 @@ const ChatList = ({ onChatRoomCreated }) => {
       }
 
       if (editRoomImage && typeof editRoomImage !== 'string') {
+        formData.append('name', selectedRoom.name);
         formData.append('image', editRoomImage);
       } else {
         const emptyImage = new Blob([], { type: 'application/octet-stream' });
