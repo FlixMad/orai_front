@@ -51,22 +51,6 @@ const ChatList = ({ onChatRoomCreated }) => {
     client.connect({}, () => {
       setStompClient(client);
 
-      // 개인 알림 구독
-      client.subscribe(`/user/${currentUser.id}/queue/chat-room`, (message) => {
-        const notification = JSON.parse(message.body);
-        // 채팅방 생성 알림 처리
-        console.log('채팅방 생성됨:', notification.message);
-      });
-
-      client.subscribe(
-        `/user/${currentUser.id}/queue/invitations`,
-        (message) => {
-          const invitation = JSON.parse(message.body);
-          // 초대 알림 처리
-          console.log('채팅방 초대됨:', invitation.message);
-        }
-      );
-
       // 채팅방 업데이트 구독 추가
       if (currentChatId) {
         client.subscribe(`/sub/${currentChatId}/chat`, (message) => {
@@ -76,20 +60,17 @@ const ChatList = ({ onChatRoomCreated }) => {
         });
       }
 
-      client.subscribe(
-        `/user/${currentUser.id}/queue/invitations`,
-        (message) => {
-          const notification = JSON.parse(message.body);
-          console.log('채팅방 삭제됨:', notification.message);
+      client.subscribe(`/queue/${currentUser.id}/queue`, (message) => {
+        const notification = JSON.parse(message.body);
+        console.log('채팅방 삭제됨:', notification.message);
 
-          // 현재 보고 있는 채팅방이 삭제된 경우 채팅방 목록으로 이동
-          if (currentChatId === `${notification.chatRoomId}`) {
-            navigate('/chat');
-          }
-
-          fetchChatRooms(); // 채팅방 목록 새로고침
+        // 현재 보고 있는 채팅방이 삭제된 경우 채팅방 목록으로 이동
+        if (currentChatId === `${notification.chatRoomId}`) {
+          navigate('/chat');
         }
-      );
+
+        fetchChatRooms(); // 채팅방 목록 새로고침
+      });
     });
 
     return () => {

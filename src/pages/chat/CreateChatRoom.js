@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import styled from 'styled-components';
 import axiosInstance from '../../configs/axios-config';
 import { API_BASE_URL, CHAT } from '../../configs/host-config';
@@ -24,22 +24,6 @@ const CreateChatRoom = ({ onChatRoomCreated }) => {
 
     client.connect({}, () => {
       setStompClient(client);
-
-      // 개인 알림 구독
-      client.subscribe(`/user/${currentUser.id}/queue/chat-room`, (message) => {
-        const notification = JSON.parse(message.body);
-        // 채팅방 생성 알림 처리
-        console.log('채팅방 생성됨:', notification.message);
-      });
-
-      client.subscribe(
-        `/user/${currentUser.id}/queue/invitations`,
-        (message) => {
-          const invitation = JSON.parse(message.body);
-          // 초대 알림 처리
-          console.log('채팅방 초대됨:', invitation.message);
-        }
-      );
     });
 
     return () => {

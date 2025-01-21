@@ -1,196 +1,319 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import styled from 'styled-components';
 import axiosInstance from '../../configs/axios-config';
 import { API_BASE_URL, CHAT } from '../../configs/host-config';
 import SockJS from 'sockjs-client';
 import { Stomp } from '@stomp/stompjs';
-import { useRecoilValue } from 'recoil';
-import { userState } from '../../recoil/userState';
+// import { useRecoilValue } from 'recoil';
+// import { userState } from '../../recoil/userState';
 import { useParams } from 'react-router-dom';
 
-const ChatRoom = () => {
+const ChatRoom = ({ jwtToken }) => {
   const { chatRoomId } = useParams();
-  const [message, setMessage] = useState('');
-  const [stompClient, setStompClient] = useState(null);
+  const [selectedRoom, setSelectedRoom] = useState(null);
   const [messages, setMessages] = useState([]);
-  const [editingMessageId, setEditingMessageId] = useState(null);
-  const [editMessage, setEditMessage] = useState('');
-  const user = useRecoilValue(userState);
+  const [message, setMessage] = useState('');
+  const stompClient = useRef(null);
+  // const [stompClient, setStompClient] = useState(null);
+
+  // const [editingMessageId, setEditingMessageId] = useState(null);
+  // const [editMessage, setEditMessage] = useState('');
+  // const user = useRecoilValue(userState);
+  // const [isConnected, setIsConnected] = useState(false);
+  // const [subscribers, setSubscribers] = useState([]);
+
+  const fetchRoomInfo = async () => {
+    try {
+      const response = await axiosInstance.get(
+        `${API_BASE_URL}${CHAT}/${chatRoomId}`
+      );
+      setSelectedRoom(response.data);
+    } catch (error) {
+      console.error('채팅방 정보 조회 실패:', error);
+    }
+  };
 
   useEffect(() => {
+    fetchRoomInfo();
     fetchMessages();
-  }, [chatRoomId]);
+
+    const socket = new SockJS(`${API_BASE_URL}/stomp`);
+    stompClient.current = Stomp.over(socket);
+
+    stompClient.current.connect(
+      { Authorization: `${jwtToken}` },
+      () => {
+        if (selectedRoom) {
+          stompClient.current.subscribe(`/sub/${chatRoomId}/chat`, (msg) => {
+            const newMessage = JSON.parse(msg.body);
+            setMessages((prev) => [...prev, newMessage]);
+          });
+        }
+      },
+      (error) => {
+        console.error('WebSocket 연결 실패:', error, jwtToken);
+      }
+    );
+
+    // 컴포넌트 언마운트 시 WebSocket 연결 해제
+    return () => {
+      if (stompClient.current) {
+        stompClient.current.disconnect(() => {
+          console.log('Disconnected from WebSocket');
+        });
+      }
+    };
+  }, [chatRoomId, jwtToken, selectedRoom]);
+
+  const sendMessage = () => {
+    if (stompClient.current && stompClient.current.connected) {
+      const messageRequest = { content: message };
+      stompClient.current.send(
+        `/pub/${chatRoomId}/send`,
+        {},
+        JSON.stringify(messageRequest)
+      );
+      setMessage(''); // 입력 필드 초기화
+    } else {
+      console.error('STOMP client is not connected');
+    }
+  };
 
   const fetchMessages = async () => {
     try {
       const response = await axiosInstance.get(
         `${API_BASE_URL}${CHAT}/${chatRoomId}/messageList`
       );
-      if (response.status === 200) {
-        setMessages(response.data);
-        alert('메시지 조회 성공');
-        fetchMessages();
-      }
+      setMessages(response.data.content);
     } catch (error) {
       console.error('메시지 조회 실패:', error);
     }
   };
 
-  // STOMP 연결 설정
-  useEffect(() => {
-    const sock = new SockJS(`${API_BASE_URL}/stomp`);
-    const client = Stomp.over(sock);
-
-    // 디버그 로그 비활성화 (수정된 부분)
-    client.debug = () => {};
-
-    client.connect({}, () => {
-      console.log('STOMP 연결 성공');
-
-      // 채팅방 구독
-      client.subscribe(`/sub/${chatRoomId}/chat`, (message) => {
-        const newMessage = JSON.parse(message.body);
-        setMessages((prev) => [...prev, newMessage]);
-        console.log('새 메시지 수신:', newMessage.message);
-      });
-    });
-
-    setStompClient(client);
-
-    return () => {
-      if (client) {
-        client.disconnect();
-      }
-    };
-  }, [chatRoomId]);
-
-  // 메시지 전송 핸들러
-  const handleSendMessage = () => {
-    if (!message.trim()) return;
-
-    stompClient.send(
-      `/pub/${chatRoomId}/send`,
-      {},
-      JSON.stringify({
-        chatRoomId: chatRoomId,
-        content: message,
-        userId: user.userId,
-      })
-    );
-    setMessage('');
-    fetchMessages();
-  };
-
-  // 메시지 수정 핸들러
-  const handleEditMessage = async (messageId, newContent) => {
-    try {
-      const response = await axiosInstance.put(
-        `${API_BASE_URL}${CHAT}/${chatRoomId}/${messageId}/updateMessage`,
-        { content: newContent }
-      );
-      if (response.status === 200) {
-        setMessages(
-          messages.map((msg) =>
-            msg.messageId === messageId ? { ...msg, content: newContent } : msg
-          )
-        );
-        setEditingMessageId(null);
-      }
-    } catch (error) {
-      console.error('메시지 수정 실패:', error);
-    }
-  };
-
-  // 메시지 삭제 핸들러
-  const handleDeleteMessage = async (messageId) => {
-    try {
-      const response = await axiosInstance.delete(
-        `${API_BASE_URL}${CHAT}/${chatRoomId}/${messageId}/deleteMessage`
-      );
-      if (response.status === 200) {
-        setMessages(messages.filter((msg) => msg.messageId !== messageId));
-      }
-    } catch (error) {
-      console.error('메시지 삭제 실패:', error);
-    }
-  };
-
   return (
-    <ChatRoomContainer>
-      <ChatHeader>
-        <ParticipantList>
-          <Participant>
-            <ParticipantAvatar
-              src="/images/profile/user-avatar.png"
-              alt="프로필"
-            />
-            <ParticipantName>name</ParticipantName>
-          </Participant>
-          {/* 더 많은 참여자들... */}
-        </ParticipantList>
-      </ChatHeader>
-
-      <ChatContent>
-        <MessageList>
-          {messages &&
-            messages.map((msg) => (
-              <MessageItem
-                key={msg.messageId}
-                isMine={msg.senderId === user.userId}
-                onContextMenu={(e) => {
-                  e.preventDefault();
-                  if (msg.senderId === user.userId) {
-                    setEditingMessageId(msg.messageId);
-                    setEditMessage(msg.content);
-                  }
-                }}
-              >
-                {editingMessageId === msg.messageId ? (
-                  <EditMessageContainer>
-                    <EditInput
-                      value={editMessage}
-                      onChange={(e) => setEditMessage(e.target.value)}
-                    />
-                    <EditButtons>
-                      <EditButton
-                        onClick={() =>
-                          handleEditMessage(msg.messageId, editMessage)
-                        }
-                      >
-                        수정
-                      </EditButton>
-                      <DeleteButton
-                        onClick={() => handleDeleteMessage(msg.messageId)}
-                      >
-                        삭제
-                      </DeleteButton>
-                      <CancelButton onClick={() => setEditingMessageId(null)}>
-                        취소
-                      </CancelButton>
-                    </EditButtons>
-                  </EditMessageContainer>
-                ) : (
-                  <MessageContent isMine={msg.senderId === user.userId}>
-                    {msg.content}
-                  </MessageContent>
-                )}
-              </MessageItem>
-            ))}
-        </MessageList>
-
-        <MessageInput>
-          <Input
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            placeholder="메시지를 입력하세요"
-            onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-          />
-          <SendButton onClick={handleSendMessage}>전송</SendButton>
-        </MessageInput>
-      </ChatContent>
-    </ChatRoomContainer>
+    <div>
+      <h1>Chat Room {chatRoomId}</h1>
+      <div>
+        {messages.map((msg, index) => (
+          <p key={index}>
+            <strong>{msg.senderId}:</strong> {msg.content}
+          </p>
+        ))}
+      </div>
+      <div>
+        <input
+          type="text"
+          value={message}
+          onChange={(e) => setMessage(e.target.value)}
+          placeholder="Type your message..."
+        />
+        <button onClick={sendMessage}>Send</button>
+      </div>
+    </div>
   );
 };
+
+// useEffect(() => {
+//   fetchSubscribers();
+//   fetchMessages();
+
+//   const sock = new SockJS(`${API_BASE_URL}/stomp`);
+//   const client = Stomp.over(sock);
+
+//   // Stomp 클라이언트 설정
+//   client.reconnect_delay = 3000; // 재연결 시도 간격 (3초)
+//   client.connect(
+//     {},
+//     () => {
+//       setStompClient(client);
+//       setIsConnected(true);
+
+//       client.subscribe(`/sub/${chatRoomId}/chat`, (message) => {
+//         const newMessage = JSON.parse(message.body);
+//         setMessages((prev) => [...prev, newMessage]);
+//         console.log('메시지 수신:', newMessage);
+//         fetchMessages();
+//       });
+//     },
+//     (error) => {
+//       console.error('STOMP 연결 에러:', error);
+//       setIsConnected(false);
+//     }
+//   );
+
+//   return () => {
+//     if (client) {
+//       client.disconnect();
+//       setIsConnected(false);
+//     }
+//   };
+// }, [chatRoomId]);
+
+// const fetchMessages = async () => {
+//   try {
+//     const response = await axiosInstance.get(
+//       `${API_BASE_URL}${CHAT}/${chatRoomId}/messageList`
+//     );
+//     if (response.status === 200) {
+//       setMessages(response.data);
+//       console.log(response.data);
+//     }
+//   } catch (error) {
+//     console.error('메시지 조회 실패:', error);
+//   }
+// };
+
+// // 구독자 목록을 가져오는 함수
+// const fetchSubscribers = async () => {
+//   try {
+//     const response = await axiosInstance.get(
+//       `${API_BASE_URL}${CHAT}/${chatRoomId}/users`
+//     );
+//     if (response.status === 200) {
+//       setSubscribers(response.data);
+//       console.log(response.data);
+//     }
+//   } catch (error) {
+//     console.error('구독자 목록 조회 실패:', error);
+//   }
+// };
+
+// // 메시지 전송 핸들러
+// const handleSendMessage = () => {
+//   if (!message.trim()) {
+//     alert('메시지를 입력해주세요.');
+//     return;
+//   }
+
+//   if (!isConnected || !stompClient) {
+//     console.log('메시지를 전송할 수 없습니다. 연결 상태를 확인하세요.');
+//     return;
+//   }
+
+//   try {
+//     stompClient.send(`/pub/${chatRoomId}/send`, {}, message);
+//     setMessage('');
+//     fetchMessages();
+//   } catch (error) {
+//     console.error('메시지 전송 실패:', error);
+//   }
+// };
+
+// // 메시지 수정 핸들러
+// const handleEditMessage = async (messageId, newContent) => {
+//   try {
+//     const response = await axiosInstance.put(
+//       `${API_BASE_URL}${CHAT}/${chatRoomId}/${messageId}/updateMessage`,
+//       { content: newContent }
+//     );
+//     if (response.status === 200) {
+//       setMessages(
+//         messages.map((msg) =>
+//           msg.messageId === messageId ? { ...msg, content: newContent } : msg
+//         )
+//       );
+//       setEditingMessageId(null);
+//       fetchMessages();
+//     }
+//   } catch (error) {
+//     console.error('메시지 수정 실패:', error);
+//   }
+// };
+
+// // 메시지 삭제 핸들러
+// const handleDeleteMessage = async (messageId) => {
+//   try {
+//     const response = await axiosInstance.delete(
+//       `${API_BASE_URL}${CHAT}/${chatRoomId}/${messageId}/deleteMessage`
+//     );
+//     if (response.status === 200) {
+//       setMessages(messages.filter((msg) => msg.messageId !== messageId));
+//       fetchMessages();
+//     }
+//   } catch (error) {
+//     console.error('메시지 삭제 실패:', error);
+//   }
+// };
+
+//   return (
+//     <ChatRoomContainer>
+//       <ChatHeader>
+//         <ParticipantList>
+//           {subscribers &&
+//             subscribers.map((subscriber) => (
+//               <Participant key={subscriber.userId}>
+//                 <ParticipantAvatar
+//                   src={
+//                     subscriber.profileImage || '/images/profile/user-avatar.png'
+//                   }
+//                   alt={subscriber.name}
+//                 />
+//                 <ParticipantName>이름: {subscriber.name}</ParticipantName>
+//               </Participant>
+//             ))}
+//         </ParticipantList>
+//       </ChatHeader>
+//       <ChatContent>
+//         <MessageList>
+//           {messages &&
+//             messages.map((msg) => (
+//               <MessageItem
+//                 key={msg.messageId}
+//                 isMine={msg.senderId === user.userId}
+//                 onContextMenu={(e) => {
+//                   e.preventDefault();
+//                   if (msg.senderId === user.userId) {
+//                     setEditingMessageId(msg.messageId);
+//                     setEditMessage(msg.content);
+//                   }
+//                 }}
+//               >
+//                 {editingMessageId === msg.messageId ? (
+//                   <EditMessageContainer>
+//                     <EditInput
+//                       value={editMessage}
+//                       onChange={(e) => setEditMessage(e.target.value)}
+//                     />
+//                     <EditButtons>
+//                       <EditButton
+//                         onClick={() =>
+//                           handleEditMessage(msg.messageId, editMessage)
+//                         }
+//                       >
+//                         수정
+//                       </EditButton>
+//                       <DeleteButton
+//                         onClick={() => handleDeleteMessage(msg.messageId)}
+//                       >
+//                         삭제
+//                       </DeleteButton>
+//                       <CancelButton onClick={() => setEditingMessageId(null)}>
+//                         취소
+//                       </CancelButton>
+//                     </EditButtons>
+//                   </EditMessageContainer>
+//                 ) : (
+//                   <MessageContent isMine={msg.senderId === user.userId}>
+//                     {msg.content}
+//                   </MessageContent>
+//                 )}
+//               </MessageItem>
+//             ))}
+//         </MessageList>
+
+//         <MessageInput>
+//           <Input
+//             value={message}
+//             onChange={(e) => setMessage(e.target.value)}
+//             placeholder="메시지를 입력하세요"
+//             onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+//           />
+//           <SendButton onClick={handleSendMessage}>전송</SendButton>
+//         </MessageInput>
+//       </ChatContent>
+//     </ChatRoomContainer>
+//   );
+// };
 
 const ChatRoomContainer = styled.div`
   height: 100%;
