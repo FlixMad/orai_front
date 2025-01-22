@@ -3,8 +3,7 @@ import styled from 'styled-components';
 import axiosInstance from '../../configs/axios-config';
 import { API_BASE_URL, CHAT } from '../../configs/host-config';
 import AddChatMember from './AddChatMember';
-import SockJS from 'sockjs-client';
-import { Stomp } from '@stomp/stompjs';
+import { Client } from '@stomp/stompjs';
 import { useRecoilValue } from 'recoil';
 import { userState } from '../../atoms/userState';
 
@@ -18,17 +17,26 @@ const CreateChatRoom = ({ onChatRoomCreated }) => {
   const currentUser = useRecoilValue(userState);
 
   useEffect(() => {
-    // 웹소켓 연결 설정
-    const sock = new SockJS(`${API_BASE_URL}/stomp`);
-    const client = Stomp.over(sock);
-
-    client.connect({}, () => {
-      setStompClient(client);
+    const client = new Client({
+      brokerURL: `${API_BASE_URL}/stomp`,
+      connectHeaders: {},
+      debug: function (str) {
+        console.log(str);
+      },
+      reconnectDelay: 5000,
+      heartbeatIncoming: 4000,
+      heartbeatOutgoing: 4000,
     });
+
+    client.onConnect = () => {
+      setStompClient(client);
+    };
+
+    client.activate();
 
     return () => {
       if (client) {
-        client.disconnect();
+        client.deactivate();
       }
     };
   }, [currentUser.id]);

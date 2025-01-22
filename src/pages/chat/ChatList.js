@@ -3,7 +3,7 @@ import styled from 'styled-components';
 import axiosInstance from '../../configs/axios-config';
 import { API_BASE_URL, CHAT } from '../../configs/host-config';
 import SockJS from 'sockjs-client';
-import { Stomp } from '@stomp/stompjs';
+import { Client } from '@stomp/stompjs';
 import { useRecoilValue } from 'recoil';
 import { userState } from '../../atoms/userState';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -45,10 +45,18 @@ const ChatList = ({ onChatRoomCreated }) => {
   useEffect(() => {
     fetchChatRooms();
 
-    const sock = new SockJS(`${API_BASE_URL}/stomp`);
-    const client = Stomp.over(sock);
+    const client = new Client({
+      webSocketFactory: () => new SockJS(`${API_BASE_URL}/stomp`),
+      connectHeaders: {},
+      debug: function (str) {
+        console.log(str);
+      },
+      reconnectDelay: 5000,
+      heartbeatIncoming: 4000,
+      heartbeatOutgoing: 4000,
+    });
 
-    client.connect({}, () => {
+    client.onConnect = () => {
       setStompClient(client);
 
       // 채팅방 업데이트 구독 추가
@@ -71,11 +79,13 @@ const ChatList = ({ onChatRoomCreated }) => {
 
         fetchChatRooms(); // 채팅방 목록 새로고침
       });
-    });
+    };
+
+    client.activate();
 
     return () => {
       if (client) {
-        client.disconnect();
+        client.deactivate();
       }
     };
   }, [currentUser.id, currentChatId]);
@@ -273,6 +283,10 @@ const ChatList = ({ onChatRoomCreated }) => {
     }
   };
 
+  const handleChatRoomClick = (chatRoomId) => {
+    navigate(`/chat/${chatRoomId}`);
+  };
+
   return (
     <ChatListContainer>
       <ChatListHeader>
@@ -298,8 +312,8 @@ const ChatList = ({ onChatRoomCreated }) => {
           filteredChatRooms.map((room) => (
             <ChatRoom
               key={room.chatRoomId}
-              onClick={() => navigate(`/chat/${room.chatRoomId}`)}
-              active={currentChatId === `${room.chatRoomId}`}
+              onClick={() => handleChatRoomClick(room.chatRoomId)}
+              $active={currentChatId === `${room.chatRoomId}`}
             >
               <RoomIcon
                 onClick={(e) => {
@@ -528,8 +542,8 @@ const ChatRoom = styled.div`
   border-radius: 8px;
   cursor: pointer;
   position: relative;
-  background: ${({ active, theme }) =>
-    active ? theme.colors.background2 : 'transparent'};
+  background: ${({ $active, theme }) =>
+    $active ? theme.colors.background2 : 'transparent'};
   transition: all 0.2s ease;
   &:hover {
     background: ${({ theme }) => theme.colors.background2};

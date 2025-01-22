@@ -22,7 +22,7 @@ const AppRoutes = () => {
       <Route path="/notifications" element={<Notifications />} />
       <Route path="/calendar" element={<Calendar />} />
       <Route path="/chat" element={<CreateChatRoom />} />
-      <Route path="/chat/:roomId" element={<ChatRoom />} />
+      <Route path="/chat/:chatRoomId" element={<ChatRoom />} />
       <Route path="/chat/list" element={<ChatList />} />
       <Route path="/organization" element={<Organization />} />
       <Route path="/emergency" element={<Emergency />} />
