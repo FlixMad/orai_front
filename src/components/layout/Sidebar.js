@@ -2,6 +2,7 @@ import styled from "styled-components";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useSidebar } from "../../context/SidebarContext";
 import { useState, useEffect } from "react";
+import { FiDatabase } from "react-icons/fi";
 
 const SidebarContainer = styled.div`
     width: ${(props) => props.theme.sidebar.width};
@@ -195,7 +196,7 @@ const Sidebar = () => {
                         onClick={() => handleNavigation("/admin/dashboard")}
                         $active={location.pathname.startsWith("/admin")}
                     >
-                        <img src="/images/icons/admin.png" alt="관리자" />
+                        <FiDatabase size={20} />
                         관리자 대시보드
                         <img src="/images/icons/arrow-right.png" alt="화살표" />
                     </StyledLink>

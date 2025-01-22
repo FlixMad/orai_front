@@ -2,6 +2,7 @@ import styled from "styled-components";
 import { useLocation, useNavigate } from "react-router-dom"; // useNavigate 추가
 import { useSidebar } from "../../context/SidebarContext";
 import { useEffect, useState } from "react";
+import { FiDatabase } from "react-icons/fi"; // FiGrid 제거
 
 const HeaderContainer = styled.header`
     height: 6vh;
@@ -45,6 +46,10 @@ const PageTitle = styled.div`
     .page-icon {
         width: 24px;
         height: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: ${({ theme }) => theme.colors.text1};
     }
 
     span {
@@ -141,42 +146,74 @@ const Header = () => {
 
     const getPageInfo = () => {
         if (location.pathname.startsWith("/chat")) {
-            return { icon: "/images/icons/chat.png", text: "채팅방" };
+            return {
+                icon: "/images/icons/chat.png",
+                text: "채팅방",
+                isReactIcon: false,
+            };
         }
 
         switch (location.pathname) {
             case "/notifications":
-                return { icon: "/images/icons/bell.png", text: "알림" };
+                return {
+                    icon: "/images/icons/bell.png",
+                    text: "알림",
+                    isReactIcon: false,
+                };
             case "/calendar":
-                return { icon: "/images/icons/calendar.png", text: "캘린더" };
+                return {
+                    icon: "/images/icons/calendar.png",
+                    text: "캘린더",
+                    isReactIcon: false,
+                };
             case "/organization":
                 return {
                     icon: "/images/icons/organization.png",
                     text: "조직도",
+                    isReactIcon: false,
                 };
             case "/emergency":
                 return {
                     icon: "/images/icons/emergency.png",
                     text: "비상연락망",
+                    isReactIcon: false,
                 };
             case "/profile":
-                return { icon: "/images/icons/profile.png", text: "프로필" };
+                return {
+                    icon: "/images/icons/profile.png",
+                    text: "프로필",
+                    isReactIcon: false,
+                };
             case "/area":
-                return { icon: "/images/icons/vacation.png", text: "연차관리" };
+                return {
+                    icon: "/images/icons/vacation.png",
+                    text: "연차관리",
+                    isReactIcon: false,
+                };
             case "/admin/dashboard":
                 return {
-                    icon: "/images/icons/admin.png",
+                    icon: <FiDatabase size={24} />,
                     text: "관리자 대시보드",
+                    isReactIcon: true,
                 };
             case "/admin/users":
-                return { icon: "/images/icons/users.png", text: "사용자 관리" };
+                return {
+                    icon: "/images/icons/users.png",
+                    text: "사용자 관리",
+                    isReactIcon: false,
+                };
             case "/admin/organization":
                 return {
                     icon: "/images/icons/org-manage.png",
                     text: "조직 관리",
+                    isReactIcon: false,
                 };
             default:
-                return { icon: "/images/icons/home.png", text: "홈" };
+                return {
+                    icon: "/images/icons/home.png",
+                    text: "홈",
+                    isReactIcon: false,
+                };
         }
     };
 
@@ -191,11 +228,13 @@ const Header = () => {
                     onClick={toggleSidebar}
                     className="menu-icon"
                 />
-                <img
-                    src={pageInfo.icon}
-                    alt={pageInfo.text}
-                    className="page-icon"
-                />
+                <div className="page-icon">
+                    {pageInfo.isReactIcon ? (
+                        pageInfo.icon
+                    ) : (
+                        <img src={pageInfo.icon} alt={pageInfo.text} />
+                    )}
+                </div>
                 <span>{pageInfo.text}</span>
             </PageTitle>
             {loading ? (
