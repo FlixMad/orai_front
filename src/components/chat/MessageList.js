@@ -1,4 +1,7 @@
 import styled from 'styled-components';
+import { useState, useEffect } from 'react';
+import axiosInstance from '../../configs/axios-config';
+import { API_BASE_URL, CHAT } from '../../configs/host-config';
 
 const MessageListContainer = styled.div`
   flex: 1;
@@ -36,6 +39,7 @@ const MessageContent = styled.div`
   border-radius: 16px;
   max-width: 70%;
   word-break: break-word;
+  position: relative;
 `;
 
 const MessageTime = styled.div`
@@ -50,8 +54,62 @@ const SenderName = styled.div`
   margin-bottom: 4px;
 `;
 
+const ContextMenu = styled.div`
+  position: fixed;
+  background: ${({ theme }) => theme.colors.background1};
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: 4px;
+  padding: 4px 0;
+  z-index: 150;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+
+  button {
+    display: block;
+    width: 100%;
+    padding: 8px 16px;
+    border: none;
+    background: none;
+    text-align: left;
+    cursor: pointer;
+
+    &:hover {
+      background: ${({ theme }) => theme.colors.background2};
+    }
+  }
+`;
+
+const EditInput = styled.input`
+  width: 100%;
+  padding: 4px 8px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: 4px;
+`;
+
+const EditButtons = styled.div`
+  display: flex;
+  gap: 4px;
+  margin-top: 4px;
+
+  button {
+    padding: 4px 8px;
+    border-radius: 4px;
+    border: none;
+    cursor: pointer;
+    background: ${({ theme }) => theme.colors.primary};
+    color: white;
+
+    &:last-child {
+      background: ${({ theme }) => theme.colors.background2};
+      color: ${({ theme }) => theme.colors.text1};
+    }
+  }
+`;
+
 const MessageList = ({ messages, formatDate }) => {
   const currentUserId = localStorage.getItem('userId');
+  const [contextMenu, setContextMenu] = useState(null);
+  const [editingMessage, setEditingMessage] = useState(null);
+  const [editContent, setEditContent] = useState('');
 
   const formatMessageDate = (date) => {
     // date가 문자열인 경우에만 변환
@@ -62,6 +120,56 @@ const MessageList = ({ messages, formatDate }) => {
     return formatDate(date);
   };
 
+  const handleContextMenu = (e, message) => {
+    if (message.senderId === currentUserId) {
+      e.preventDefault();
+      setContextMenu({
+        messageId: message.messageId,
+        x: e.clientX,
+        y: e.clientY,
+        chatRoomId: message.chatRoomId,
+      });
+    }
+  };
+
+  const handleEdit = (message) => {
+    setEditingMessage(message);
+    setEditContent(message.content);
+    setContextMenu(null);
+  };
+
+  const handleSaveEdit = async () => {
+    try {
+      await axiosInstance.put(
+        `${API_BASE_URL}${CHAT}/${editingMessage.chatRoomId}/${editingMessage.messageId}/updateMessage`,
+        { content: editContent }
+      );
+      setEditingMessage(null);
+      setEditContent('');
+    } catch (error) {
+      console.error('메시지 수정 실패:', error);
+      alert('메시지 수정에 실패했습니다.');
+    }
+  };
+
+  const handleDelete = async () => {
+    try {
+      await axiosInstance.delete(
+        `${API_BASE_URL}${CHAT}/${contextMenu.chatRoomId}/${contextMenu.messageId}/deleteMessage`
+      );
+      setContextMenu(null);
+    } catch (error) {
+      console.error('메시지 삭제 실패:', error);
+      alert('메시지 삭제에 실패했습니다.');
+    }
+  };
+
+  useEffect(() => {
+    const handleClickOutside = () => setContextMenu(null);
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, []);
+
   return (
     <MessageListContainer>
       {messages.map((message) => {
@@ -71,14 +179,52 @@ const MessageList = ({ messages, formatDate }) => {
           <MessageItem key={message.messageId} $isMine={isMine}>
             <MessageWrapper $isMine={isMine}>
               {!isMine && <SenderName>{message.senderId}</SenderName>}
-              <MessageContent $isMine={isMine}>
-                {message.content}
+              <MessageContent
+                $isMine={isMine}
+                onContextMenu={(e) => handleContextMenu(e, message)}
+              >
+                {editingMessage?.messageId === message.messageId ? (
+                  <div>
+                    <EditInput
+                      value={editContent}
+                      onChange={(e) => setEditContent(e.target.value)}
+                      autoFocus
+                    />
+                    <EditButtons>
+                      <button onClick={handleSaveEdit}>저장</button>
+                      <button onClick={() => setEditingMessage(null)}>
+                        취소
+                      </button>
+                    </EditButtons>
+                  </div>
+                ) : (
+                  message.content
+                )}
               </MessageContent>
               <MessageTime>{formatMessageDate(message.createdAt)}</MessageTime>
             </MessageWrapper>
           </MessageItem>
         );
       })}
+      {contextMenu && (
+        <ContextMenu
+          style={{
+            top: contextMenu.y,
+            left: contextMenu.x,
+          }}
+        >
+          <button
+            onClick={() =>
+              handleEdit(
+                messages.find((m) => m.messageId === contextMenu.messageId)
+              )
+            }
+          >
+            수정
+          </button>
+          <button onClick={handleDelete}>삭제</button>
+        </ContextMenu>
+      )}
     </MessageListContainer>
   );
 };

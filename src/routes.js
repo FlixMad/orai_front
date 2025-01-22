@@ -21,14 +21,12 @@ const AppRoutes = () => {
       <Route path="/password/change" element={<PasswordChange />} />
       <Route path="/notifications" element={<Notifications />} />
       <Route path="/calendar" element={<Calendar />} />
-      <Route path="/chat" element={<CreateChatRoom />} />
+      <Route path="/chat" element={<ChatList />} />
+      <Route path="/chat/create" element={<CreateChatRoom />} />
       <Route path="/chat/:chatRoomId" element={<ChatRoom />} />
-      <Route path="/chat/list" element={<ChatList />} />
       <Route path="/organization" element={<Organization />} />
       <Route path="/emergency" element={<Emergency />} />
-      <Route path="/profile" element={<Profile />} />
       <Route path="/leave" element={<LeaveManagement />} />
-      <Route path="/admin/dashboard" element={<AdminDashboard />} />
     </Routes>
   );
 };

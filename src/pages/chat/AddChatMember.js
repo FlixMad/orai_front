@@ -222,7 +222,7 @@ const AddChatMember = ({
 
       <ButtonGroup>
         <BackButton onClick={onBack}>이전</BackButton>
-        <CreateButton onClick={handleAddMembers}>생성</CreateButton>
+        <CreateButton onClick={handleAddMembers}>확인</CreateButton>
       </ButtonGroup>
     </Container>
   );
