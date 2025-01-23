@@ -178,6 +178,7 @@ const ChatList = ({ onChatRoomCreated }) => {
         handleCloseModal();
         onChatRoomCreated?.(chatRoomData);
         fetchChatRooms();
+        navigate(`/chat/${chatRoomData.chatRoomId}`);
       }
     } catch (error) {
       console.error('채팅방 생성 실패:', error);
@@ -243,7 +244,7 @@ const ChatList = ({ onChatRoomCreated }) => {
       } else if (error?.response?.status === 400) {
         alert('변경된 내용이 없거나 잘못된 요청입니다.');
       } else {
-        alert('채팅방 수정에 실패했습니다.');
+        alert('채팅방 수정 권한이 없습니다.');
       }
     }
   };
@@ -275,7 +276,7 @@ const ChatList = ({ onChatRoomCreated }) => {
         alert('존재하지 않는 채팅방입니다.');
         fetchChatRooms();
       } else {
-        alert('채팅방 삭제에 실패했습니다.');
+        alert('채팅방 삭제 권한이 없습니다.');
       }
     }
   };

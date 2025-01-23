@@ -117,7 +117,7 @@ const CreateChatRoom = ({ onChatRoomCreated }) => {
         alert('채팅방이 생성되었습니다.');
         handleCloseModal();
         onChatRoomCreated?.(chatRoomData);
-        window.location.reload();
+        window.location.href = `/chat/${chatRoomData.chatRoomId}`;
       }
     } catch (error) {
       console.error('채팅방 생성 실패:', error);
