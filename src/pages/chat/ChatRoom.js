@@ -6,7 +6,7 @@ import { API_BASE_URL, CHAT } from '../../configs/host-config';
 import styled from 'styled-components';
 import ParticipantsList from '../../components/chat/ParticipantsList';
 import MessageList from '../../components/chat/MessageList';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import AddChatMember from './AddChatMember';
 
 const ChatRoomContainer = styled.div`
@@ -141,6 +141,7 @@ const ChatRoom = () => {
   const [chatRoomInfo, setChatRoomInfo] = useState({ name: '', imageUrl: '' });
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [selectedUsers, setSelectedUsers] = useState([]);
+  const navigate = useNavigate();
 
   useEffect(() => {
     console.log('현재 채팅방 ID:', chatRoomId);
@@ -154,7 +155,9 @@ const ChatRoom = () => {
   useEffect(() => {
     const client = new Client({
       webSocketFactory: () => new SockJS(`${API_BASE_URL}/stomp`),
-      connectHeaders: {},
+      connectHeaders: {
+        Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
+      },
       debug: function (str) {
         console.log(str);
       },
@@ -168,14 +171,39 @@ const ChatRoom = () => {
 
       // 채팅방 메시지 구독
       client.subscribe(`/sub/${chatRoomId}/chat`, (message) => {
-        const newMessage = JSON.parse(message.body);
+        const receivedMessage = JSON.parse(message.body);
+
+        // 시스템 메시지 처리
+        if (typeof receivedMessage === 'string') {
+          // 시스템 메시지 표시 (입장, 퇴장 등)
+          setMessages((prev) => [
+            ...prev,
+            {
+              messageId: Date.now(),
+              content: receivedMessage,
+              type: 'SYSTEM',
+              createdAt: new Date(),
+            },
+          ]);
+          return;
+        }
+
         setMessages((prev) => [
           ...prev,
           {
-            ...newMessage,
-            createdAt: new Date(newMessage.createdAt),
+            ...receivedMessage,
+            createdAt: new Date(receivedMessage.createdAt),
           },
         ]);
+      });
+
+      // 개인 알림 구독 추가
+      client.subscribe(`/queue/queue`, (notification) => {
+        const data = JSON.parse(notification.body);
+        // 채팅방 삭제 등의 알림 처리
+        if (data.chatRoomId === chatRoomId) {
+          navigate('/chat');
+        }
       });
     };
 
@@ -190,7 +218,7 @@ const ChatRoom = () => {
         client.deactivate();
       }
     };
-  }, [chatRoomId]);
+  }, [chatRoomId, navigate]);
 
   useEffect(() => {
     // 채팅방 정보 가져오기

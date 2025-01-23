@@ -33,9 +33,15 @@ const MessageWrapper = styled.div`
 `;
 
 const MessageContent = styled.div`
-  background: ${({ $isMine, theme }) =>
-    $isMine ? theme.colors.primary : theme.colors.background2};
-  color: ${({ $isMine }) => ($isMine ? 'white' : 'inherit')};
+  background: ${({ $isMine, $isSystem, theme }) =>
+    $isSystem
+      ? theme.colors.background2
+      : $isMine
+      ? theme.colors.primary
+      : theme.colors.background2};
+  color: ${({ $isMine, $isSystem, theme }) =>
+    $isSystem ? theme.colors.text2 : $isMine ? 'white' : theme.colors.text1};
+  text-align: ${({ $isSystem }) => ($isSystem ? 'center' : 'left')};
   padding: 8px 16px;
   border-radius: 16px;
   max-width: 70%;
@@ -258,17 +264,24 @@ const MessageList = ({ messages, setMessages, formatDate, chatRoomId }) => {
       ) : null}
       {messages.map((message) => {
         const isMine = message.senderId === currentUserId;
+        const isSystem = message.type === 'SYSTEM';
 
         return (
           <MessageItem
             key={`${message.messageId}-${message.createdAt}`}
             $isMine={isMine}
+            $isSystem={isSystem}
           >
-            <MessageWrapper $isMine={isMine}>
-              {!isMine && <SenderName>{message.senderId}</SenderName>}
+            <MessageWrapper $isMine={isMine} $isSystem={isSystem}>
+              {!isMine && !isSystem && (
+                <SenderName>{message.senderName}</SenderName>
+              )}
               <MessageContent
                 $isMine={isMine}
-                onContextMenu={(e) => handleContextMenu(e, message)}
+                $isSystem={isSystem}
+                onContextMenu={(e) =>
+                  !isSystem && handleContextMenu(e, message)
+                }
               >
                 {editingMessage?.messageId === message.messageId ? (
                   <div>
@@ -288,7 +301,11 @@ const MessageList = ({ messages, setMessages, formatDate, chatRoomId }) => {
                   message.content
                 )}
               </MessageContent>
-              <MessageTime>{formatMessageDate(message.createdAt)}</MessageTime>
+              {!isSystem && (
+                <MessageTime>
+                  {formatMessageDate(message.createdAt)}
+                </MessageTime>
+              )}
             </MessageWrapper>
           </MessageItem>
         );

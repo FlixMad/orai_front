@@ -47,7 +47,9 @@ const ChatList = ({ onChatRoomCreated }) => {
 
     const client = new Client({
       webSocketFactory: () => new SockJS(`${API_BASE_URL}/stomp`),
-      connectHeaders: {},
+      connectHeaders: {
+        Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
+      },
       debug: function (str) {
         console.log(str);
       },
@@ -68,15 +70,10 @@ const ChatList = ({ onChatRoomCreated }) => {
         });
       }
 
-      client.subscribe(`/queue/${currentUser.id}/queue`, (message) => {
-        const notification = JSON.parse(message.body);
-        console.log('채팅방 삭제됨:', notification.message);
-
-        // 현재 보고 있는 채팅방이 삭제된 경우 채팅방 목록으로 이동
-        if (currentChatId === `${notification.chatRoomId}`) {
-          navigate('/chat');
-        }
-
+      client.subscribe(`/user/queue`, (notification) => {
+        const data = JSON.parse(notification.body);
+        // 채팅방 삭제 알림 처리
+        alert(data.message);
         fetchChatRooms(); // 채팅방 목록 새로고침
       });
     };
