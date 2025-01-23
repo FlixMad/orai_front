@@ -1,4 +1,5 @@
 import styled from 'styled-components';
+import { API_BASE_URL, CHAT } from '../../configs/host-config';
 
 const ParticipantsOverlay = styled.div`
   position: absolute;
@@ -86,9 +87,78 @@ const ParticipantName = styled.span`
   color: ${({ theme }) => theme.colors.text1};
 `;
 
-const ParticipantsList = ({ participants }) => {
+const RemoveButton = styled.button`
+  padding: 4px 8px;
+  background-color: ${({ theme }) => theme.colors.danger || '#ff4444'};
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  margin-left: auto;
+
+  &:hover {
+    background-color: ${({ theme }) => theme.colors.dangerHover || '#ff6666'};
+  }
+`;
+
+const HeaderContainer = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
+`;
+
+const Title = styled.h3`
+  margin: 0;
+  font-size: 14px;
+  color: ${({ theme }) => theme.colors.text1};
+`;
+
+const CloseButton = styled.button`
+  background: none;
+  border: none;
+  color: ${({ theme }) => theme.colors.text2};
+  cursor: pointer;
+  padding: 4px;
+  font-size: 16px;
+
+  &:hover {
+    color: ${({ theme }) => theme.colors.text1};
+  }
+`;
+
+const ParticipantsList = ({
+  participants,
+  chatRoomId,
+  isCreator,
+  onRemoveUser,
+  onClose,
+}) => {
+  const handleRemoveUser = async (userId) => {
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}${CHAT}/${chatRoomId}/${userId}/deleteUser`
+      );
+
+      if (response.status === 204) {
+        alert('사용자를 내보냈습니다.');
+      }
+      onRemoveUser?.(userId);
+    } catch (error) {
+      console.error('Error removing user:', error);
+      alert('사용자를 내보내는데 실패했습니다.');
+    }
+  };
+
   return (
-    <ParticipantsOverlay>
+    <ParticipantsOverlay onClick={(e) => e.stopPropagation()}>
+      <HeaderContainer>
+        <Title>참가자 목록</Title>
+        <CloseButton onClick={onClose}>&times;</CloseButton>
+      </HeaderContainer>
       {participants.map((participant) => (
         <ParticipantItem key={participant.userId}>
           <ParticipantImage
@@ -96,6 +166,11 @@ const ParticipantsList = ({ participants }) => {
             alt={participant.name}
           />
           <ParticipantName>{participant.name}</ParticipantName>
+          {isCreator && participant.userId !== participant.creatorId && (
+            <RemoveButton onClick={() => handleRemoveUser(participant.userId)}>
+              내보내기
+            </RemoveButton>
+          )}
         </ParticipantItem>
       ))}
     </ParticipantsOverlay>

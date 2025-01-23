@@ -161,6 +161,7 @@ const ChatRoom = () => {
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [selectedUsers, setSelectedUsers] = useState([]);
   const navigate = useNavigate();
+  const [currentUserId] = useState(localStorage.getItem('userId'));
 
   useEffect(() => {
     console.log('현재 채팅방 ID:', chatRoomId);
@@ -341,17 +342,6 @@ const ChatRoom = () => {
     }
   };
 
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (showParticipants && !event.target.closest('.participants-trigger')) {
-        setShowParticipants(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [showParticipants]);
-
   const handleSelectedUsers = (users) => {
     setSelectedUsers(users);
   };
@@ -413,6 +403,29 @@ const ChatRoom = () => {
     }
   };
 
+  const handleRemoveUser = async (userId) => {
+    try {
+      await axiosInstance.delete(
+        `${API_BASE_URL}${CHAT}/${chatRoomId}/${userId}/deleteUser`
+      );
+
+      if (userId === chatRoomInfo.creatorId) {
+        alert('채팅방 생성자는 내보낼 수 없습니다.');
+        return;
+      }
+
+      // 참가자 목록 새로고침
+      fetchParticipants();
+    } catch (error) {
+      console.error('사용자 내보내기 실패:', error);
+      if (error.response?.status === 403) {
+        alert('채팅방 생성자만 사용자를 내보낼 수 있습니다.');
+      } else {
+        alert('사용자를 내보내는데 실패했습니다.');
+      }
+    }
+  };
+
   return (
     <ChatRoomContainer>
       <ChatHeader>
@@ -423,14 +436,17 @@ const ChatRoom = () => {
               alt={chatRoomInfo.name}
             />
             <ChatRoomName>{chatRoomInfo.name}</ChatRoomName>
-            <ParticipantsCount
-              className="participants-trigger"
-              onClick={() => setShowParticipants(!showParticipants)}
-            >
+            <ParticipantsCount onClick={() => setShowParticipants(true)}>
               ({participants.length})
             </ParticipantsCount>
             {showParticipants && (
-              <ParticipantsList participants={participants} />
+              <ParticipantsList
+                participants={participants}
+                chatRoomId={chatRoomId}
+                isCreator={currentUserId === chatRoomInfo.creatorId}
+                onRemoveUser={handleRemoveUser}
+                onClose={() => setShowParticipants(false)}
+              />
             )}
           </ChatRoomInfoLeft>
           <ButtonGroup>
