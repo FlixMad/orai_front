@@ -252,6 +252,8 @@ const MessageList = ({ messages, setMessages, formatDate, chatRoomId }) => {
     return () => document.removeEventListener('click', handleClickOutside);
   }, []);
 
+  console.log('받은 메시지:', messages);
+
   return (
     <MessageListContainer ref={containerRef} onScroll={handleScroll}>
       {loading && <LoadingIndicator>로딩 중...</LoadingIndicator>}
@@ -272,7 +274,7 @@ const MessageList = ({ messages, setMessages, formatDate, chatRoomId }) => {
           >
             <MessageWrapper $isMine={isMine} $isSystem={isSystem}>
               {!isMine && !isSystem && (
-                <SenderName>{message.senderName}</SenderName>
+                <SenderName>{message.senderName || '누구냐 넌'}</SenderName>
               )}
               <MessageContent
                 $isMine={isMine}

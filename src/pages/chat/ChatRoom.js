@@ -304,6 +304,7 @@ const ChatRoom = () => {
     if (!messageContent.trim() || !stompClient) return;
 
     const userId = localStorage.getItem('userId');
+    const userName = localStorage.getItem('userName');
 
     // 웹소켓을 통한 메시지 브로드캐스트
     stompClient.publish({
@@ -311,6 +312,7 @@ const ChatRoom = () => {
       body: messageContent,
       headers: {
         userId: userId,
+        userName: userName,
       },
     });
 
