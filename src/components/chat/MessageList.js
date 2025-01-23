@@ -1,7 +1,8 @@
 import styled from 'styled-components';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import axiosInstance from '../../configs/axios-config';
 import { API_BASE_URL, CHAT } from '../../configs/host-config';
+import PropTypes from 'prop-types';
 
 const MessageListContainer = styled.div`
   flex: 1;
@@ -105,11 +106,58 @@ const EditButtons = styled.div`
   }
 `;
 
-const MessageList = ({ messages, formatDate }) => {
+const LoadingIndicator = styled.div`
+  text-align: center;
+  padding: 10px;
+  color: ${({ theme }) => theme.colors.text2};
+`;
+
+const MessageList = ({ messages, setMessages, formatDate, chatRoomId }) => {
   const currentUserId = localStorage.getItem('userId');
   const [contextMenu, setContextMenu] = useState(null);
   const [editingMessage, setEditingMessage] = useState(null);
   const [editContent, setEditContent] = useState('');
+  const [page, setPage] = useState(1);
+  const [loading, setLoading] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const containerRef = useRef(null);
+
+  useEffect(() => {
+    if (containerRef.current) {
+      containerRef.current.scrollTop = containerRef.current.scrollHeight;
+    }
+  }, [messages]);
+
+  const loadMoreMessages = useCallback(async () => {
+    if (loading || !hasMore) return;
+
+    try {
+      setLoading(true);
+      const response = await axiosInstance.get(
+        `${API_BASE_URL}${CHAT}/messages?page=${page}&size=30`
+      );
+
+      if (response.data.length < 30) {
+        setHasMore(false);
+      }
+      setPage((prev) => prev + 1);
+      setMessages((prevMessages) => [...response.data, ...prevMessages]);
+    } catch (error) {
+      console.error('메시지 로딩 실패:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [page, loading, hasMore]);
+
+  const handleScroll = useCallback(() => {
+    if (containerRef.current) {
+      const { scrollTop } = containerRef.current;
+
+      if (scrollTop === 0) {
+        loadMoreMessages();
+      }
+    }
+  }, [loadMoreMessages]);
 
   const formatMessageDate = (date) => {
     // date가 문자열인 경우에만 변환
@@ -171,7 +219,13 @@ const MessageList = ({ messages, formatDate }) => {
   }, []);
 
   return (
-    <MessageListContainer>
+    <MessageListContainer ref={containerRef} onScroll={handleScroll}>
+      {loading && <LoadingIndicator>로딩 중...</LoadingIndicator>}
+      {messages.length === 0 && !loading && (
+        <div style={{ textAlign: 'center', color: '#999', padding: '20px' }}>
+          메시지가 없습니다.
+        </div>
+      )}
       {messages.map((message) => {
         const isMine = message.senderId === currentUserId;
 
@@ -227,6 +281,13 @@ const MessageList = ({ messages, formatDate }) => {
       )}
     </MessageListContainer>
   );
+};
+
+MessageList.propTypes = {
+  messages: PropTypes.array.isRequired,
+  setMessages: PropTypes.func.isRequired,
+  formatDate: PropTypes.func.isRequired,
+  chatRoomId: PropTypes.string.isRequired,
 };
 
 export default MessageList;

@@ -147,6 +147,11 @@ const ChatRoom = () => {
   }, [chatRoomId]);
 
   useEffect(() => {
+    // chatRoomId가 변경될 때 메시지 상태 초기화
+    setMessages([]);
+  }, [chatRoomId]);
+
+  useEffect(() => {
     const client = new Client({
       webSocketFactory: () => new SockJS(`${API_BASE_URL}/stomp`),
       connectHeaders: {},
@@ -344,7 +349,11 @@ const ChatRoom = () => {
         </ChatRoomInfo>
       </ChatHeader>
       <ChatContent>
-        <MessageList messages={messages} formatDate={formatDate} />
+        <MessageList
+          messages={messages}
+          setMessages={setMessages}
+          formatDate={formatDate}
+        />
       </ChatContent>
       <MessageInput>
         <Input
