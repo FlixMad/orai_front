@@ -123,31 +123,61 @@ const MessageList = ({ messages, setMessages, formatDate, chatRoomId }) => {
   const containerRef = useRef(null);
 
   useEffect(() => {
+    // 채팅방이 변경될 때 메시지 초기화 및 스크롤 위치 조정
+    setMessages([]);
+    setPage(1);
+    setHasMore(true);
+    if (containerRef.current) {
+      containerRef.current.scrollTop = containerRef.current.scrollHeight;
+    }
+  }, [chatRoomId]); // chatRoomId 변경 감지
+
+  useEffect(() => {
     if (containerRef.current) {
       containerRef.current.scrollTop = containerRef.current.scrollHeight;
     }
   }, [messages]);
 
   const loadMoreMessages = useCallback(async () => {
-    if (loading || !hasMore) return;
+    if (loading || !hasMore || page <= 0) return;
 
     try {
       setLoading(true);
       const response = await axiosInstance.get(
-        `${API_BASE_URL}${CHAT}/messages?page=${page}&size=30`
+        `${API_BASE_URL}${CHAT}/${chatRoomId}/messageList?page=${
+          page - 1
+        }&size=30`
       );
 
-      if (response.data.length < 30) {
-        setHasMore(false);
+      if (response && response.data) {
+        if (response.data.length < 30) {
+          setHasMore(false);
+        }
+        setPage((prev) => prev - 1);
+
+        // 중복 메시지 제거
+        setMessages((prevMessages) => {
+          const newMessages = response.data.filter(
+            (newMsg) =>
+              !prevMessages.some((msg) => msg.messageId === newMsg.messageId)
+          );
+          return [...newMessages, ...prevMessages];
+        });
+
+        if (containerRef.current) {
+          containerRef.current.scrollTop =
+            containerRef.current.scrollHeight -
+            containerRef.current.clientHeight;
+        }
+      } else {
+        console.error('응답 데이터가 올바르지 않습니다:', response);
       }
-      setPage((prev) => prev + 1);
-      setMessages((prevMessages) => [...response.data, ...prevMessages]);
     } catch (error) {
       console.error('메시지 로딩 실패:', error);
     } finally {
       setLoading(false);
     }
-  }, [page, loading, hasMore]);
+  }, [page, loading, hasMore, chatRoomId]);
 
   const handleScroll = useCallback(() => {
     if (containerRef.current) {
@@ -221,16 +251,19 @@ const MessageList = ({ messages, setMessages, formatDate, chatRoomId }) => {
   return (
     <MessageListContainer ref={containerRef} onScroll={handleScroll}>
       {loading && <LoadingIndicator>로딩 중...</LoadingIndicator>}
-      {messages.length === 0 && !loading && (
+      {messages.length === 0 ? (
         <div style={{ textAlign: 'center', color: '#999', padding: '20px' }}>
           메시지가 없습니다.
         </div>
-      )}
+      ) : null}
       {messages.map((message) => {
         const isMine = message.senderId === currentUserId;
 
         return (
-          <MessageItem key={message.messageId} $isMine={isMine}>
+          <MessageItem
+            key={`${message.messageId}-${message.createdAt}`}
+            $isMine={isMine}
+          >
             <MessageWrapper $isMine={isMine}>
               {!isMine && <SenderName>{message.senderId}</SenderName>}
               <MessageContent

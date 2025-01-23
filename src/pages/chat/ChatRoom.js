@@ -267,6 +267,16 @@ const ChatRoom = () => {
       .post(`${API_BASE_URL}${CHAT}/${chatRoomId}/saveMessage`, {
         content: messageContent,
       })
+      .then((response) => {
+        // 메시지 저장이 성공하면 메시지 리스트 업데이트
+        setMessages((prevMessages) => [
+          ...prevMessages,
+          {
+            ...response.data,
+            createdAt: new Date(response.data.createdAt),
+          },
+        ]);
+      })
       .catch((error) => {
         console.error('메시지 저장 중 오류가 발생했습니다:', error);
       });
@@ -353,6 +363,7 @@ const ChatRoom = () => {
           messages={messages}
           setMessages={setMessages}
           formatDate={formatDate}
+          chatRoomId={chatRoomId}
         />
       </ChatContent>
       <MessageInput>
