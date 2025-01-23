@@ -9,7 +9,7 @@ import { userState } from '../../atoms/userState';
 import { useNavigate, useLocation } from 'react-router-dom';
 import AddChatMember from './AddChatMember';
 
-const ChatList = ({ onChatRoomCreated }) => {
+const ChatRoomList = ({ onChatRoomCreated }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredChatRooms, setFilteredChatRooms] = useState([]);
   const navigate = useNavigate();
@@ -771,4 +771,4 @@ const ConfirmButton = styled(Button)`
   }
 `;
 
-export default ChatList;
+export default ChatRoomList;

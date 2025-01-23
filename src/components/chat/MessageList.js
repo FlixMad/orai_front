@@ -3,6 +3,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import axiosInstance from '../../configs/axios-config';
 import { API_BASE_URL, CHAT } from '../../configs/host-config';
 import PropTypes from 'prop-types';
+import _ from 'lodash';
 
 const MessageListContainer = styled.div`
   flex: 1;
@@ -127,54 +128,66 @@ const MessageList = ({ messages, setMessages, formatDate, chatRoomId }) => {
   const [loading, setLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const containerRef = useRef(null);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const [prevScrollHeight, setPrevScrollHeight] = useState(0);
 
   useEffect(() => {
-    // 채팅방이 변경될 때 메시지 초기화 및 스크롤 위치 조정
+    // 채팅방이 변경될 때 상태 초기화
     setMessages([]);
     setPage(1);
     setHasMore(true);
-    if (containerRef.current) {
-      containerRef.current.scrollTop = containerRef.current.scrollHeight;
-    }
-  }, [chatRoomId]); // chatRoomId 변경 감지
+    setIsInitialLoad(true);
+  }, [chatRoomId]);
 
+  // 새 메시지가 추가될 때 스크롤 처리
   useEffect(() => {
-    if (containerRef.current) {
+    if (!containerRef.current) return;
+
+    // 초기 로드 시 또는 본인이 보낸 메시지일 경우 항상 맨 아래로 스크롤
+    if (
+      isInitialLoad ||
+      messages[messages.length - 1]?.senderId === currentUserId
+    ) {
       containerRef.current.scrollTop = containerRef.current.scrollHeight;
+      setIsInitialLoad(false);
+      return;
     }
-  }, [messages]);
+
+    // 이전 메시지 로드 시 스크롤 위치 유지
+    const scrollDiff = containerRef.current.scrollHeight - prevScrollHeight;
+    if (scrollDiff > 0 && page > 1) {
+      containerRef.current.scrollTop = scrollDiff;
+    }
+  }, [messages, isInitialLoad, currentUserId, page]);
 
   const loadMoreMessages = useCallback(async () => {
     if (loading || !hasMore || page <= 0) return;
 
     try {
       setLoading(true);
+      setPrevScrollHeight(containerRef.current?.scrollHeight || 0);
+
       const response = await axiosInstance.get(
-        `${API_BASE_URL}${CHAT}/${chatRoomId}/messageList`
+        `${API_BASE_URL}${CHAT}/${chatRoomId}/messageList?page=${page}`
       );
 
-      if (response && response.data) {
+      if (response?.data) {
         if (response.data.length < 30) {
           setHasMore(false);
         }
-        setPage((prev) => prev - 1);
 
-        // 중복 메시지 제거
+        setPage((prev) => prev + 1);
+
+        // 중복 메시지 제거 및 정렬
         setMessages((prevMessages) => {
           const newMessages = response.data.filter(
             (newMsg) =>
               !prevMessages.some((msg) => msg.messageId === newMsg.messageId)
           );
-          return [...newMessages, ...prevMessages];
+          return [...newMessages, ...prevMessages].sort(
+            (a, b) => new Date(a.createdAt) - new Date(b.createdAt)
+          );
         });
-
-        if (containerRef.current) {
-          containerRef.current.scrollTop =
-            containerRef.current.scrollHeight -
-            containerRef.current.clientHeight;
-        }
-      } else {
-        console.error('응답 데이터가 올바르지 않습니다:', response);
       }
     } catch (error) {
       console.error('메시지 로딩 실패:', error);
@@ -184,14 +197,30 @@ const MessageList = ({ messages, setMessages, formatDate, chatRoomId }) => {
   }, [page, loading, hasMore, chatRoomId]);
 
   const handleScroll = useCallback(() => {
-    if (containerRef.current) {
-      const { scrollTop } = containerRef.current;
+    if (!containerRef.current) return;
 
-      if (scrollTop === 0) {
-        loadMoreMessages();
-      }
+    const { scrollTop, scrollHeight, clientHeight } = containerRef.current;
+    const scrollPercentage = (scrollTop / (scrollHeight - clientHeight)) * 100;
+
+    // 스크롤이 상단 10% 이내일 때 이전 메시지 로드
+    if (scrollPercentage < 10 && !loading && hasMore) {
+      loadMoreMessages();
     }
-  }, [loadMoreMessages]);
+  }, [loadMoreMessages, loading, hasMore]);
+
+  // 스크롤 이벤트에 쓰로틀 적용
+  const throttledHandleScroll = useCallback(_.throttle(handleScroll, 300), [
+    handleScroll,
+  ]);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (container) {
+      container.addEventListener('scroll', throttledHandleScroll);
+      return () =>
+        container.removeEventListener('scroll', throttledHandleScroll);
+    }
+  }, [throttledHandleScroll]);
 
   const formatMessageDate = (date) => {
     // date가 문자열인 경우에만 변환
@@ -255,7 +284,7 @@ const MessageList = ({ messages, setMessages, formatDate, chatRoomId }) => {
   console.log('받은 메시지:', messages);
 
   return (
-    <MessageListContainer ref={containerRef} onScroll={handleScroll}>
+    <MessageListContainer ref={containerRef}>
       {loading && <LoadingIndicator>로딩 중...</LoadingIndicator>}
       {messages.length === 0 ? (
         <div style={{ textAlign: 'center', color: '#999', padding: '20px' }}>
