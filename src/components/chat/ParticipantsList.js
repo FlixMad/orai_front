@@ -86,36 +86,6 @@ const ParticipantName = styled.span`
   color: ${({ theme }) => theme.colors.text1};
 `;
 
-const Modal = styled.div`
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-`;
-
-const ModalContent = styled.div`
-  background: white;
-  padding: 24px;
-  border-radius: 12px;
-  width: 90%;
-  max-width: 400px;
-  position: relative;
-  z-index: 1001;
-`;
-
-const ModalTitle = styled.h3`
-  font-size: 20px;
-  font-weight: 600;
-  margin-bottom: 16px;
-  color: ${({ theme }) => theme.colors.text1};
-`;
-
 const ParticipantsList = ({ participants }) => {
   return (
     <ParticipantsOverlay>

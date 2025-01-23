@@ -48,7 +48,7 @@ const ChatList = ({ onChatRoomCreated }) => {
     const client = new Client({
       webSocketFactory: () => new SockJS(`${API_BASE_URL}/stomp`),
       connectHeaders: {
-        Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
+        Authorization: `Bearer ${localStorage.getItem('ACCESS_TOKEN')}`,
       },
       debug: function (str) {
         console.log(str);

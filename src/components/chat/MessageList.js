@@ -150,9 +150,7 @@ const MessageList = ({ messages, setMessages, formatDate, chatRoomId }) => {
     try {
       setLoading(true);
       const response = await axiosInstance.get(
-        `${API_BASE_URL}${CHAT}/${chatRoomId}/messageList?page=${
-          page - 1
-        }&size=30`
+        `${API_BASE_URL}${CHAT}/${chatRoomId}/messageList`
       );
 
       if (response && response.data) {

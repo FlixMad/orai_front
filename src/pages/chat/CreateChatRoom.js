@@ -19,7 +19,9 @@ const CreateChatRoom = ({ onChatRoomCreated }) => {
   useEffect(() => {
     const client = new Client({
       brokerURL: `${API_BASE_URL}/stomp`,
-      connectHeaders: {},
+      connectHeaders: {
+        Authorization: `Bearer ${localStorage.getItem('ACCESS_TOKEN')}`,
+      },
       debug: function (str) {
         console.log(str);
       },
