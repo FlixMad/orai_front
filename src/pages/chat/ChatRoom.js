@@ -436,7 +436,9 @@ const ChatRoom = () => {
               alt={chatRoomInfo.name}
             />
             <ChatRoomName>{chatRoomInfo.name}</ChatRoomName>
-            <ParticipantsCount onClick={() => setShowParticipants(true)}>
+            <ParticipantsCount
+              onClick={() => setShowParticipants(!showParticipants)}
+            >
               ({participants.length})
             </ParticipantsCount>
             {showParticipants && (
@@ -487,6 +489,7 @@ const ChatRoom = () => {
               }}
               selectedUsers={selectedUsers}
               onSelectedUsersChange={handleSelectedUsers}
+              currentParticipants={participants}
             />
           </ModalContent>
         </Modal>

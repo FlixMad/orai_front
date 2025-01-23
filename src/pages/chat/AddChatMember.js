@@ -9,6 +9,7 @@ const AddChatMember = ({
   onBack,
   selectedUsers: initialSelectedUsers,
   onSelectedUsersChange,
+  currentParticipants,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [users, setUsers] = useState([]);
@@ -58,10 +59,15 @@ const AddChatMember = ({
 
         const userData = response.data.result.content || [];
         const currentUserId = localStorage.getItem('userId');
+        const participantIds = currentParticipants.map((p) => p.userId);
 
         setUsers(
           userData
-            .filter((user) => user.userId !== currentUserId)
+            .filter(
+              (user) =>
+                user.userId !== currentUserId &&
+                !participantIds.includes(user.userId)
+            )
             .map((user) => ({
               id: user.userId,
               name: user.name,
@@ -76,7 +82,7 @@ const AddChatMember = ({
         setLoading(false);
       }
     }, 299),
-    []
+    [currentParticipants]
   );
 
   useEffect(() => {
@@ -108,9 +114,14 @@ const AddChatMember = ({
         const userData = response.data.result.content || [];
         const isLast = response.data.result.last;
         const currentUserId = localStorage.getItem('userId');
+        const participantIds = currentParticipants.map((p) => p.userId);
 
         const formattedUsers = userData
-          .filter((user) => user.userId !== currentUserId)
+          .filter(
+            (user) =>
+              user.userId !== currentUserId &&
+              !participantIds.includes(user.userId)
+          )
           .map((user) => ({
             id: user.userId,
             name: user.name,
@@ -130,7 +141,7 @@ const AddChatMember = ({
     };
 
     fetchUsers();
-  }, [page, size, searchTerm]);
+  }, [page, size, searchTerm, currentParticipants]);
 
   const handleAddMembers = async () => {
     if (selectedUsers.length === 0) {
