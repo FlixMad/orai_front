@@ -29,6 +29,13 @@ const ChatRoomInfo = styled.div`
   gap: 12px;
   flex: 1;
   position: relative;
+  justify-content: space-between;
+`;
+
+const ChatRoomInfoLeft = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 12px;
 `;
 
 const ChatRoomImage = styled.img`
@@ -93,7 +100,6 @@ const SendButton = styled.button`
 
 const InviteButton = styled.button`
   padding: 8px 16px;
-  margin-bottom: 12px;
   background: ${({ theme }) => theme.colors.primary};
   color: white;
   border: none;
@@ -103,6 +109,19 @@ const InviteButton = styled.button`
 
   &:hover {
     background: ${({ theme }) => theme.colors.primaryDark};
+  }
+`;
+
+const ButtonGroup = styled.div`
+  display: flex;
+  gap: 8px;
+`;
+
+const ExitButton = styled(InviteButton)`
+  background: ${({ theme }) => theme.colors.danger || '#dc3545'};
+
+  &:hover {
+    background: ${({ theme }) => theme.colors.dangerDark || '#bd2130'};
   }
 `;
 
@@ -175,7 +194,6 @@ const ChatRoom = () => {
 
         // 시스템 메시지 처리
         if (typeof receivedMessage === 'string') {
-          // 시스템 메시지 표시 (입장, 퇴장 등)
           setMessages((prev) => [
             ...prev,
             {
@@ -284,10 +302,15 @@ const ChatRoom = () => {
   const handleSendMessage = () => {
     if (!messageContent.trim() || !stompClient) return;
 
+    const userId = localStorage.getItem('userId');
+
     // 웹소켓을 통한 메시지 브로드캐스트
     stompClient.publish({
       destination: `/pub/${chatRoomId}/send`,
       body: messageContent,
+      headers: {
+        userId: userId,
+      },
     });
 
     // REST API를 통한 메시지 저장
@@ -365,25 +388,57 @@ const ChatRoom = () => {
     }
   };
 
+  const handleExitChatRoom = async () => {
+    if (window.confirm('정말로 채팅방을 나가시겠습니까?')) {
+      try {
+        const response = await axiosInstance.delete(
+          `${API_BASE_URL}${CHAT}/${chatRoomId}/disconnect`
+        );
+
+        if (response.status === 204) {
+          alert('채팅방을 나갔습니다.');
+          navigate('/chat'); // 채팅방 목록으로 이동
+        }
+      } catch (error) {
+        console.error('채팅방 나가기 실패:', error);
+        if (error?.response?.status === 500) {
+          alert('방장은 채팅방을 나갈 수 없습니다.');
+        } else if (error?.response?.status === 404) {
+          alert('존재하지 않는 채팅방입니다.');
+        } else {
+          alert('방장은 채팅방을 나갈 수 없습니다.');
+          navigate(`/chat/${chatRoomId}`);
+        }
+      }
+    }
+  };
+
   return (
     <ChatRoomContainer>
       <ChatHeader>
         <ChatRoomInfo>
-          <ChatRoomImage
-            src={chatRoomInfo.image || '/default-chat-room.png'}
-            alt={chatRoomInfo.name}
-          />
-          <ChatRoomName>{chatRoomInfo.name}</ChatRoomName>
-          <ParticipantsCount
-            className="participants-trigger"
-            onClick={() => setShowParticipants(!showParticipants)}
-          >
-            ({participants.length})
-          </ParticipantsCount>
-          <InviteButton onClick={() => setShowInviteModal(true)}>
-            멤버초대
-          </InviteButton>
-          {showParticipants && <ParticipantsList participants={participants} />}
+          <ChatRoomInfoLeft>
+            <ChatRoomImage
+              src={chatRoomInfo.image || '/default-chat-room.png'}
+              alt={chatRoomInfo.name}
+            />
+            <ChatRoomName>{chatRoomInfo.name}</ChatRoomName>
+            <ParticipantsCount
+              className="participants-trigger"
+              onClick={() => setShowParticipants(!showParticipants)}
+            >
+              ({participants.length})
+            </ParticipantsCount>
+            {showParticipants && (
+              <ParticipantsList participants={participants} />
+            )}
+          </ChatRoomInfoLeft>
+          <ButtonGroup>
+            <InviteButton onClick={() => setShowInviteModal(true)}>
+              멤버초대
+            </InviteButton>
+            <ExitButton onClick={handleExitChatRoom}>채팅방 나가기</ExitButton>
+          </ButtonGroup>
         </ChatRoomInfo>
       </ChatHeader>
       <ChatContent>

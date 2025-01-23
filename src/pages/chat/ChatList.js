@@ -239,9 +239,9 @@ const ChatList = ({ onChatRoomCreated }) => {
         message: error?.message,
       });
 
-      if (error?.response?.status === 403) {
+      if (error?.response?.status === 500) {
         alert('채팅방 수정 권한이 없습니다.');
-      } else if (error?.response?.status === 400) {
+      } else if (error?.response?.status === 404) {
         alert('변경된 내용이 없거나 잘못된 요청입니다.');
       } else {
         alert('채팅방 수정 권한이 없습니다.');
@@ -270,7 +270,7 @@ const ChatList = ({ onChatRoomCreated }) => {
       }
     } catch (error) {
       console.error('채팅방 삭제 실패:', error);
-      if (error?.response?.status === 403) {
+      if (error?.response?.status === 500) {
         alert('채팅방 삭제 권한이 없습니다.');
       } else if (error?.response?.status === 404) {
         alert('존재하지 않는 채팅방입니다.');
