@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
 import axiosInstance from '../../configs/axios-config';
@@ -136,7 +136,6 @@ const ChatRoom = () => {
   const [messages, setMessages] = useState([]);
   const [participants, setParticipants] = useState([]);
   const [messageContent, setMessageContent] = useState('');
-  const messageListRef = useRef(null);
   const [stompClient, setStompClient] = useState(null);
   const [showParticipants, setShowParticipants] = useState(false);
   const [chatRoomInfo, setChatRoomInfo] = useState({ name: '', imageUrl: '' });

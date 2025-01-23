@@ -6,7 +6,6 @@ import PasswordChange from './pages/auth/PasswordChange';
 import Notifications from './pages/notifications/Notifications';
 import Calendar from './pages/calendar/Calendar';
 import ChatRoom from './pages/chat/ChatRoom';
-import ChatList from './pages/chat/ChatList';
 import CreateChatRoom from './pages/chat/CreateChatRoom';
 import Organization from './pages/organization/Organization';
 import Emergency from './pages/emergency/Emergency';
@@ -21,8 +20,7 @@ const AppRoutes = () => {
       <Route path="/password/change" element={<PasswordChange />} />
       <Route path="/notifications" element={<Notifications />} />
       <Route path="/calendar" element={<Calendar />} />
-      <Route path="/chat" element={<ChatList />} />
-      <Route path="/chat/create" element={<CreateChatRoom />} />
+      <Route path="/chat" element={<CreateChatRoom />} />
       <Route path="/chat/:chatRoomId" element={<ChatRoom />} />
       <Route path="/organization" element={<Organization />} />
       <Route path="/emergency" element={<Emergency />} />

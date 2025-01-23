@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import axiosInstance from '../../configs/axios-config';
 import { API_BASE_URL, CHAT } from '../../configs/host-config';
