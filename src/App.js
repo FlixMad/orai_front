@@ -7,12 +7,17 @@ import Layout from "./components/layout/Layout";
 import AppRoutes from "./routes";
 import theme from "./styles/theme";
 import GlobalStyle from "./styles/GlobalStyle";
+import DevLogin from "./pages/auth/DevLogin";
 
 const PrivateRoute = ({ children }) => {
     const location = useLocation();
     const token = localStorage.getItem("ACCESS_TOKEN");
 
-    if (!token && location.pathname !== "/login") {
+    if (
+        !token &&
+        location.pathname !== "/login" &&
+        location.pathname !== "/devLogin"
+    ) {
         return <Navigate to="/login" replace />;
     }
 
@@ -26,6 +31,7 @@ function App() {
                 <GlobalStyle />
                 <Routes>
                     <Route path="/login" element={<Login />} />
+                    <Route path="/devLogin" element={<DevLogin />} />
                     <Route
                         path="/*"
                         element={
