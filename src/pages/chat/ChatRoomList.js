@@ -231,12 +231,6 @@ const ChatRoomList = ({ onChatRoomCreated }) => {
         fetchChatRooms();
       }
     } catch (error) {
-      console.error('채팅방 수정 실패 상세:', {
-        status: error?.response?.status,
-        data: error?.response?.data,
-        message: error?.message,
-      });
-
       if (error?.response?.status === 500) {
         alert('채팅방 수정 권한이 없습니다.');
       } else if (error?.response?.status === 404) {
