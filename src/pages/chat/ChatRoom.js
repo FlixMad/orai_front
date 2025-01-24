@@ -193,15 +193,32 @@ const ChatRoom = () => {
       client.subscribe(`/sub/${chatRoomId}/chat`, (message) => {
         const receivedMessage = JSON.parse(message.body);
 
+        // 메시지 수정 이벤트 처리
+        if (receivedMessage.type === 'EDIT') {
+          setMessages((prev) =>
+            prev.map((msg) =>
+              msg.messageId === receivedMessage.messageId
+                ? { ...msg, content: receivedMessage.content }
+                : msg
+            )
+          );
+          return;
+        }
+
+        // 메시지 삭제 이벤트 처리
+        if (receivedMessage.type === 'DELETE') {
+          setMessages((prev) =>
+            prev.filter((msg) => msg.messageId !== receivedMessage.messageId)
+          );
+          return;
+        }
+
         // 시스템 메시지 처리
         if (typeof receivedMessage === 'string') {
           setMessages((prev) => [
             ...prev,
             {
-              messageId: Date.now(),
               content: receivedMessage,
-              type: 'SYSTEM',
-              createdAt: new Date(),
             },
           ]);
           return;
@@ -318,6 +335,13 @@ const ChatRoom = () => {
 
     const userId = localStorage.getItem('userId');
     const userName = localStorage.getItem('userName');
+
+    const newMessage = {
+      content: messageContent,
+    };
+
+    // 즉시 메시지 목록에 추가
+    setMessages((prev) => [...prev, newMessage]);
 
     // 웹소켓을 통한 메시지 브로드캐스트
     stompClient.publish({

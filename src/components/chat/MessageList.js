@@ -34,20 +34,31 @@ const MessageWrapper = styled.div`
 `;
 
 const MessageContent = styled.div`
-  background: ${({ $isMine, $isSystem, theme }) =>
-    $isSystem
+  background: ${({ $isMine, $isSystem, $isDeleted, theme }) =>
+    $isDeleted
+      ? theme.colors.background2
+      : $isSystem
       ? theme.colors.background2
       : $isMine
       ? theme.colors.primary
       : theme.colors.background2};
-  color: ${({ $isMine, $isSystem, theme }) =>
-    $isSystem ? theme.colors.text2 : $isMine ? 'white' : theme.colors.text1};
-  text-align: ${({ $isSystem }) => ($isSystem ? 'center' : 'left')};
+  color: ${({ $isMine, $isSystem, $isDeleted, theme }) =>
+    $isDeleted
+      ? theme.colors.text3
+      : $isSystem
+      ? theme.colors.text2
+      : $isMine
+      ? 'white'
+      : theme.colors.text1};
+  text-align: ${({ $isSystem, $isDeleted }) =>
+    $isSystem || $isDeleted ? 'center' : 'left'};
   padding: 8px 16px;
   border-radius: 16px;
   max-width: 70%;
   word-break: break-word;
   position: relative;
+  cursor: ${({ $isDeleted }) => ($isDeleted ? 'default' : 'pointer')};
+  font-style: ${({ $isDeleted }) => ($isDeleted ? 'italic' : 'normal')};
 `;
 
 const MessageTime = styled.div`
@@ -60,37 +71,6 @@ const SenderName = styled.div`
   font-size: 12px;
   color: ${({ theme }) => theme.colors.text2};
   margin-bottom: 4px;
-`;
-
-const ContextMenu = styled.div`
-  position: fixed;
-  background: ${({ theme }) => theme.colors.background1};
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  border-radius: 4px;
-  padding: 4px 0;
-  z-index: 150;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
-
-  button {
-    display: block;
-    width: 100%;
-    padding: 8px 16px;
-    border: none;
-    background: none;
-    text-align: left;
-    cursor: pointer;
-
-    &:hover {
-      background: ${({ theme }) => theme.colors.background2};
-    }
-  }
-`;
-
-const EditInput = styled.input`
-  width: 100%;
-  padding: 4px 8px;
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  border-radius: 4px;
 `;
 
 const EditButtons = styled.div`
@@ -113,15 +93,63 @@ const EditButtons = styled.div`
   }
 `;
 
+const ContextMenu = styled.div`
+  display: flex;
+  gap: 4px;
+  margin-top: 4px;
+  justify-content: ${({ $isMine }) => ($isMine ? 'flex-end' : 'flex-start')};
+
+  button {
+    padding: 4px 8px;
+    border-radius: 4px;
+    border: none;
+    cursor: pointer;
+    font-size: 12px;
+    transition: all 0.2s ease;
+
+    &:first-child {
+      background: ${({ theme }) => theme.colors.primary};
+      color: white;
+
+      &:hover {
+        background: ${({ theme }) => theme.colors.primaryDark || '#0056b3'};
+      }
+    }
+
+    &:last-child {
+      background: ${({ theme }) => theme.colors.background2};
+      color: ${({ theme }) => theme.colors.text1};
+
+      &:hover {
+        background: ${({ theme }) => theme.colors.danger || '#dc3545'};
+        color: white;
+      }
+    }
+  }
+`;
+
+const EditInput = styled.input`
+  width: 100%;
+  padding: 4px 8px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: 4px;
+`;
+
 const LoadingIndicator = styled.div`
   text-align: center;
   padding: 10px;
   color: ${({ theme }) => theme.colors.text2};
 `;
 
-const MessageList = ({ messages, setMessages, formatDate, chatRoomId }) => {
+const MessageList = ({
+  messages,
+  setMessages,
+  formatDate,
+  chatRoomId,
+  stompClient,
+}) => {
   const currentUserId = localStorage.getItem('userId');
-  const [contextMenu, setContextMenu] = useState(null);
+  const [selectedMessageId, setSelectedMessageId] = useState(null);
   const [editingMessage, setEditingMessage] = useState(null);
   const [editContent, setEditContent] = useState('');
   const [page, setPage] = useState(1);
@@ -139,7 +167,7 @@ const MessageList = ({ messages, setMessages, formatDate, chatRoomId }) => {
     setIsInitialLoad(true);
   }, [chatRoomId]);
 
-  // 새 메시지가 추가될 때 스크롤 처리
+  // 메시지가 변경될 때마다 스크롤 위치 조정
   useEffect(() => {
     if (!containerRef.current) return;
 
@@ -150,15 +178,8 @@ const MessageList = ({ messages, setMessages, formatDate, chatRoomId }) => {
     ) {
       containerRef.current.scrollTop = containerRef.current.scrollHeight;
       setIsInitialLoad(false);
-      return;
     }
-
-    // 이전 메시지 로드 시 스크롤 위치 유지
-    const scrollDiff = containerRef.current.scrollHeight - prevScrollHeight;
-    if (scrollDiff > 0 && page > 1) {
-      containerRef.current.scrollTop = scrollDiff;
-    }
-  }, [messages, isInitialLoad, currentUserId, page]);
+  }, [messages, isInitialLoad, currentUserId]);
 
   const loadMoreMessages = useCallback(async () => {
     if (loading || !hasMore || page < 0) return;
@@ -217,28 +238,6 @@ const MessageList = ({ messages, setMessages, formatDate, chatRoomId }) => {
     }
   }, [loadMoreMessages, loading, hasMore]);
 
-  // 초기 로드 시 스크롤 위치 조정
-  useEffect(() => {
-    if (!containerRef.current || messages.length === 0) return;
-
-    // 초기 로드 시 또는 본인이 보낸 메시지일 경우 항상 맨 아래로 스크롤
-    if (
-      isInitialLoad ||
-      messages[messages.length - 1]?.senderId === currentUserId
-    ) {
-      containerRef.current.scrollTop = containerRef.current.scrollHeight;
-      setIsInitialLoad(false);
-      return;
-    }
-
-    // 이전 메시지 로드 시 스크롤 위치 유지
-    if (prevScrollHeight > 0 && page > 1) {
-      const newScrollHeight = containerRef.current.scrollHeight;
-      const scrollDiff = newScrollHeight - prevScrollHeight;
-      containerRef.current.scrollTop = scrollDiff;
-    }
-  }, [messages, isInitialLoad, currentUserId, page, prevScrollHeight]);
-
   // 스크롤 이벤트 리스너 등록
   useEffect(() => {
     const container = containerRef.current;
@@ -261,30 +260,48 @@ const MessageList = ({ messages, setMessages, formatDate, chatRoomId }) => {
     return formatDate(date);
   };
 
-  const handleContextMenu = (e, message) => {
-    if (message.senderId === currentUserId) {
+  const handleMessageClick = (e, message) => {
+    // 현재 사용자의 메시지들만 필터링
+    const userMessages = messages.filter(
+      (msg) => msg.senderId === currentUserId
+    );
+
+    // 사용자의 마지막 메시지의 ID를 가져옴
+    const lastUserMessageId = userMessages[userMessages.length - 1]?.messageId;
+
+    // 클릭한 메시지가 현재 사용자의 마지막 메시지인 경우에만 수정/삭제 메뉴 표시
+    if (
+      message.senderId === currentUserId &&
+      message.messageId === lastUserMessageId
+    ) {
       e.preventDefault();
-      setContextMenu({
-        messageId: message.messageId,
-        x: e.clientX,
-        y: e.clientY,
-        chatRoomId: message.chatRoomId,
-      });
+      e.stopPropagation();
+      setSelectedMessageId(message.messageId);
     }
   };
 
   const handleEdit = (message) => {
     setEditingMessage(message);
     setEditContent(message.content);
-    setContextMenu(null);
+    setSelectedMessageId(null);
   };
 
   const handleSaveEdit = async () => {
     try {
       await axiosInstance.put(
-        `${API_BASE_URL}${CHAT}/${editingMessage.chatRoomId}/${editingMessage.messageId}/updateMessage`,
+        `${API_BASE_URL}${CHAT}/${chatRoomId}/${editingMessage.messageId}/updateMessage`,
         { content: editContent }
       );
+
+      // 메시지 수정 후 즉시 상태 업데이트
+      setMessages((prevMessages) =>
+        prevMessages.map((msg) =>
+          msg.messageId === editingMessage.messageId
+            ? { ...msg, content: editContent }
+            : msg
+        )
+      );
+
       setEditingMessage(null);
       setEditContent('');
     } catch (error) {
@@ -297,22 +314,50 @@ const MessageList = ({ messages, setMessages, formatDate, chatRoomId }) => {
     try {
       const confirmed = window.confirm('정말 이 메시지를 삭제하시겠습니까?');
       if (!confirmed) {
-        setContextMenu(null);
+        setSelectedMessageId(null);
         return;
       }
 
       await axiosInstance.delete(
-        `${API_BASE_URL}${CHAT}/${contextMenu.chatRoomId}/${contextMenu.messageId}/deleteMessage`
+        `${API_BASE_URL}${CHAT}/${chatRoomId}/${selectedMessageId}/deleteMessage`
       );
-      setContextMenu(null);
+
+      // 메시지 삭제 후 즉시 상태 업데이트
+      setMessages((prevMessages) =>
+        prevMessages.map((msg) =>
+          msg.messageId === selectedMessageId
+            ? { ...msg, content: '메시지가 삭제되었습니다.', type: 'DELETE' }
+            : msg
+        )
+      );
+
+      setSelectedMessageId(null);
     } catch (error) {
       console.error('메시지 삭제 실패:', error);
       alert('메시지 삭제에 실패했습니다.');
     }
   };
 
+  // ChatRoom 컴포넌트에서 메시지 전송 후 즉시 상태 업데이트를 위한 함수
+  const handleNewMessage = useCallback((message) => {
+    setMessages((prevMessages) => {
+      // 중복 메시지 체크
+      if (prevMessages.some((msg) => msg.messageId === message.messageId)) {
+        return prevMessages;
+      }
+      return [
+        ...prevMessages,
+        {
+          ...message,
+          createdAt: new Date(message.createdAt),
+        },
+      ];
+    });
+  }, []);
+
+  // 클릭 이벤트 리스너 추가
   useEffect(() => {
-    const handleClickOutside = () => setContextMenu(null);
+    const handleClickOutside = () => setSelectedMessageId(null);
     document.addEventListener('click', handleClickOutside);
     return () => document.removeEventListener('click', handleClickOutside);
   }, []);
@@ -330,6 +375,13 @@ const MessageList = ({ messages, setMessages, formatDate, chatRoomId }) => {
       {messages.map((message) => {
         const isMine = message.senderId === currentUserId;
         const isSystem = message.type === 'SYSTEM';
+        const isDeleted = message.type === 'DELETE';
+        const userMessages = messages.filter(
+          (msg) => msg.senderId === currentUserId
+        );
+        const lastUserMessageId =
+          userMessages[userMessages.length - 1]?.messageId;
+        const isLastMessage = message.messageId === lastUserMessageId;
 
         return (
           <MessageItem
@@ -338,15 +390,22 @@ const MessageList = ({ messages, setMessages, formatDate, chatRoomId }) => {
             $isSystem={isSystem}
           >
             <MessageWrapper $isMine={isMine} $isSystem={isSystem}>
-              {!isMine && !isSystem && (
+              {!isMine && !isSystem && !isDeleted && (
                 <SenderName>{message.senderName || '알 수 없음'}</SenderName>
               )}
               <MessageContent
                 $isMine={isMine}
                 $isSystem={isSystem}
-                onContextMenu={(e) =>
-                  !isSystem && handleContextMenu(e, message)
+                $isDeleted={isDeleted}
+                onClick={(e) =>
+                  !isSystem && !isDeleted && handleMessageClick(e, message)
                 }
+                style={{
+                  cursor:
+                    isMine && isLastMessage && !isDeleted
+                      ? 'pointer'
+                      : 'default',
+                }}
               >
                 {editingMessage?.messageId === message.messageId ? (
                   <div>
@@ -362,11 +421,22 @@ const MessageList = ({ messages, setMessages, formatDate, chatRoomId }) => {
                       </button>
                     </EditButtons>
                   </div>
+                ) : isDeleted ? (
+                  '메시지가 삭제되었습니다.'
                 ) : (
                   message.content
                 )}
               </MessageContent>
-              {!isSystem && (
+              {selectedMessageId === message.messageId &&
+                isMine &&
+                isLastMessage &&
+                !isDeleted && (
+                  <ContextMenu $isMine={isMine}>
+                    <button onClick={() => handleEdit(message)}>수정</button>
+                    <button onClick={handleDelete}>삭제</button>
+                  </ContextMenu>
+                )}
+              {!isSystem && !isDeleted && (
                 <MessageTime>
                   {formatMessageDate(message.createdAt)}
                 </MessageTime>
@@ -375,25 +445,6 @@ const MessageList = ({ messages, setMessages, formatDate, chatRoomId }) => {
           </MessageItem>
         );
       })}
-      {contextMenu && (
-        <ContextMenu
-          style={{
-            top: contextMenu.y,
-            left: contextMenu.x,
-          }}
-        >
-          <button
-            onClick={() =>
-              handleEdit(
-                messages.find((m) => m.messageId === contextMenu.messageId)
-              )
-            }
-          >
-            수정
-          </button>
-          <button onClick={handleDelete}>삭제</button>
-        </ContextMenu>
-      )}
     </MessageListContainer>
   );
 };
@@ -403,6 +454,7 @@ MessageList.propTypes = {
   setMessages: PropTypes.func.isRequired,
   formatDate: PropTypes.func.isRequired,
   chatRoomId: PropTypes.string.isRequired,
+  stompClient: PropTypes.object,
 };
 
 export default MessageList;
