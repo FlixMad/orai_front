@@ -9,7 +9,7 @@ const MessageListContainer = styled.div`
   flex: 1;
   overflow-y: auto;
   margin-bottom: 24px;
-  padding: 20px;
+  padding: 15px;
 
   &::-webkit-scrollbar {
     width: 4px;
@@ -23,14 +23,16 @@ const MessageListContainer = styled.div`
 
 const MessageItem = styled.div`
   display: flex;
-  justify-content: ${({ $isMine }) => ($isMine ? 'flex-end' : 'flex-start')};
+  justify-content: ${({ $isMine, $isSystem }) =>
+    $isSystem ? 'center' : $isMine ? 'flex-end' : 'flex-start'};
   margin-bottom: 16px;
 `;
 
 const MessageWrapper = styled.div`
   display: flex;
   flex-direction: column;
-  align-items: ${({ $isMine }) => ($isMine ? 'flex-end' : 'flex-start')};
+  align-items: ${({ $isMine, $isSystem }) =>
+    $isSystem ? 'center' : $isMine ? 'flex-end' : 'flex-start'};
   gap: 4px;
 `;
 
@@ -55,11 +57,14 @@ const MessageContent = styled.div`
     $isSystem || $isDeleted ? 'center' : 'left'};
   padding: 8px 16px;
   border-radius: 16px;
-  max-width: 70%;
+  max-width: ${({ $isSystem }) => ($isSystem ? '100%' : '260px')};
+  min-width: fit-content;
+  min-height: ${({ $isSystem }) => ($isSystem ? 'auto' : '40px')};
   word-break: break-word;
   position: relative;
   cursor: ${({ $isDeleted }) => ($isDeleted ? 'default' : 'pointer')};
   font-style: ${({ $isDeleted }) => ($isDeleted ? 'italic' : 'normal')};
+  margin: ${({ $isSystem }) => ($isSystem ? '8px auto' : '0')};
 `;
 
 const MessageTime = styled.div`
