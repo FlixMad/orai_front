@@ -217,7 +217,7 @@ const MessageList = ({ messages, setMessages, formatDate, chatRoomId }) => {
         const isDeleted = message.type === 'DELETE';
         const isEdited = message.type === 'EDIT';
         const userMessages = messages.filter(
-          (msg) => msg.senderId === currentUserId && msg.type === 'CHAT'
+          (msg) => msg.senderId === currentUserId && msg.type !== 'SYSTEM'
         );
         const lastUserMessageId =
           userMessages[userMessages.length - 1]?.messageId;

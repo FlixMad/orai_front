@@ -64,13 +64,11 @@ const ChatRoomList = ({ onChatRoomCreated }) => {
       // 채팅방 업데이트 구독 추가
       if (currentChatId) {
         client.subscribe(`/sub/${currentChatId}/chat`, (message) => {
-          const notification = message.body;
-          alert(notification); // 채팅방 업데이트 알림 표시
           fetchChatRooms(); // 채팅방 목록 새로고침
         });
       }
 
-      client.subscribe(`/user/queue`, (notification) => {
+      client.subscribe(`/queue/queue`, (notification) => {
         const data = JSON.parse(notification.body);
         // 채팅방 삭제 알림 처리
         alert(data.message);

@@ -213,7 +213,6 @@ const ChatRoom = () => {
 
         // 에러 메시지 처리
         if (receivedMessage.type === 'ERROR') {
-          alert(receivedMessage.content);
           return prevMessages;
         }
 
@@ -253,7 +252,6 @@ const ChatRoom = () => {
         try {
           const receivedMessage = JSON.parse(message.body);
           if (receivedMessage.type === 'ERROR') {
-            alert(receivedMessage.content);
             return;
           }
           handleNewMessage(receivedMessage);
