@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
 import axiosInstance from '../../configs/axios-config';
@@ -164,6 +164,17 @@ const ChatRoom = () => {
   const [currentUserId] = useState(localStorage.getItem('userId'));
   const [selectedMessageId, setSelectedMessageId] = useState(null);
   const [editingMessage, setEditingMessage] = useState(null);
+  const messageListRef = useRef(null);
+
+  const scrollToBottom = useCallback(() => {
+    if (messageListRef.current) {
+      messageListRef.current.scrollTop = messageListRef.current.scrollHeight;
+    }
+  }, []);
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [chatRoomId, scrollToBottom]);
 
   useEffect(() => {
     console.log('현재 채팅방 ID:', chatRoomId);
@@ -174,45 +185,51 @@ const ChatRoom = () => {
     setMessages([]);
   }, [chatRoomId]);
 
-  const handleNewMessage = useCallback((receivedMessage) => {
-    setMessages((prevMessages) => {
-      // 중복 메시지 체크
-      if (
-        prevMessages.some((msg) => msg.messageId === receivedMessage.messageId)
-      ) {
-        // 메시지 타입에 따른 업데이트 처리
+  const handleNewMessage = useCallback(
+    (receivedMessage) => {
+      setMessages((prevMessages) => {
+        // 중복 메시지 체크
         if (
-          receivedMessage.type === 'EDIT' ||
-          receivedMessage.type === 'DELETE'
+          prevMessages.some(
+            (msg) => msg.messageId === receivedMessage.messageId
+          )
         ) {
-          return prevMessages.map((msg) =>
-            msg.messageId === receivedMessage.messageId
-              ? {
-                  ...receivedMessage,
-                  createdAt: new Date(receivedMessage.createdAt),
-                }
-              : msg
-          );
+          // 메시지 타입에 따른 업데이트 처리
+          if (
+            receivedMessage.type === 'EDIT' ||
+            receivedMessage.type === 'DELETE'
+          ) {
+            return prevMessages.map((msg) =>
+              msg.messageId === receivedMessage.messageId
+                ? {
+                    ...receivedMessage,
+                    createdAt: new Date(receivedMessage.createdAt),
+                  }
+                : msg
+            );
+          }
+          return prevMessages;
         }
-        return prevMessages;
-      }
 
-      // 에러 메시지 처리
-      if (receivedMessage.type === 'ERROR') {
-        alert(receivedMessage.content);
-        return prevMessages;
-      }
+        // 에러 메시지 처리
+        if (receivedMessage.type === 'ERROR') {
+          alert(receivedMessage.content);
+          return prevMessages;
+        }
 
-      // 새 메시지 추가
-      return [
-        ...prevMessages,
-        {
-          ...receivedMessage,
-          createdAt: new Date(receivedMessage.createdAt),
-        },
-      ];
-    });
-  }, []);
+        // 새 메시지 추가 후 스크롤
+        setTimeout(scrollToBottom, 100);
+        return [
+          ...prevMessages,
+          {
+            ...receivedMessage,
+            createdAt: new Date(receivedMessage.createdAt),
+          },
+        ];
+      });
+    },
+    [scrollToBottom]
+  );
 
   useEffect(() => {
     const client = new Client({
@@ -478,6 +495,7 @@ const ChatRoom = () => {
       </ChatHeader>
       <ChatContent>
         <MessageList
+          ref={messageListRef}
           messages={messages}
           setMessages={setMessages}
           formatDate={formatDate}
