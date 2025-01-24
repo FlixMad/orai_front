@@ -141,6 +141,12 @@ const LoadingIndicator = styled.div`
   color: ${({ theme }) => theme.colors.text2};
 `;
 
+const EditedMark = styled.span`
+  font-size: 11px;
+  color: ${({ theme }) => theme.colors.text3};
+  margin-left: 4px;
+`;
+
 const MessageList = ({
   messages,
   setMessages,
@@ -292,16 +298,7 @@ const MessageList = ({
         `${API_BASE_URL}${CHAT}/${chatRoomId}/${editingMessage.messageId}/updateMessage`,
         { content: editContent }
       );
-
-      // 메시지 수정 후 즉시 상태 업데이트
-      setMessages((prevMessages) =>
-        prevMessages.map((msg) =>
-          msg.messageId === editingMessage.messageId
-            ? { ...msg, content: editContent }
-            : msg
-        )
-      );
-
+      // WebSocket으로 업데이트된 메시지를 받을 것이므로 여기서는 상태 업데이트하지 않음
       setEditingMessage(null);
       setEditContent('');
     } catch (error) {
@@ -321,16 +318,7 @@ const MessageList = ({
       await axiosInstance.delete(
         `${API_BASE_URL}${CHAT}/${chatRoomId}/${selectedMessageId}/deleteMessage`
       );
-
-      // 메시지 삭제 후 즉시 상태 업데이트
-      setMessages((prevMessages) =>
-        prevMessages.map((msg) =>
-          msg.messageId === selectedMessageId
-            ? { ...msg, content: '메시지가 삭제되었습니다.', type: 'DELETE' }
-            : msg
-        )
-      );
-
+      // WebSocket으로 삭제된 메시지를 받을 것이므로 여기서는 상태 업데이트하지 않음
       setSelectedMessageId(null);
     } catch (error) {
       console.error('메시지 삭제 실패:', error);
@@ -338,13 +326,27 @@ const MessageList = ({
     }
   };
 
-  // ChatRoom 컴포넌트에서 메시지 전송 후 즉시 상태 업데이트를 위한 함수
+  // WebSocket 메시지 처리 함수
   const handleNewMessage = useCallback((message) => {
     setMessages((prevMessages) => {
       // 중복 메시지 체크
       if (prevMessages.some((msg) => msg.messageId === message.messageId)) {
+        // 메시지 타입에 따른 업데이트 처리
+        if (message.type === 'EDIT' || message.type === 'DELETE') {
+          return prevMessages.map((msg) =>
+            msg.messageId === message.messageId ? message : msg
+          );
+        }
         return prevMessages;
       }
+
+      // 에러 메시지 처리
+      if (message.type === 'ERROR') {
+        alert(message.content);
+        return prevMessages;
+      }
+
+      // 새 메시지 추가
       return [
         ...prevMessages,
         {
@@ -376,8 +378,9 @@ const MessageList = ({
         const isMine = message.senderId === currentUserId;
         const isSystem = message.type === 'SYSTEM';
         const isDeleted = message.type === 'DELETE';
+        const isEdited = message.type === 'EDIT';
         const userMessages = messages.filter(
-          (msg) => msg.senderId === currentUserId
+          (msg) => msg.senderId === currentUserId && msg.type === 'CHAT'
         );
         const lastUserMessageId =
           userMessages[userMessages.length - 1]?.messageId;
@@ -385,7 +388,9 @@ const MessageList = ({
 
         return (
           <MessageItem
-            key={`${message.messageId}-${message.createdAt}`}
+            key={`${message.messageId}-${
+              message.updatedAt || message.createdAt
+            }`}
             $isMine={isMine}
             $isSystem={isSystem}
           >
@@ -421,10 +426,13 @@ const MessageList = ({
                       </button>
                     </EditButtons>
                   </div>
-                ) : isDeleted ? (
-                  '메시지가 삭제되었습니다.'
                 ) : (
-                  message.content
+                  <>
+                    {message.content}
+                    {isEdited && !isDeleted && (
+                      <EditedMark>(수정됨)</EditedMark>
+                    )}
+                  </>
                 )}
               </MessageContent>
               {selectedMessageId === message.messageId &&

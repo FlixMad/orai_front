@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
 import axiosInstance from '../../configs/axios-config';
@@ -162,6 +162,8 @@ const ChatRoom = () => {
   const [selectedUsers, setSelectedUsers] = useState([]);
   const navigate = useNavigate();
   const [currentUserId] = useState(localStorage.getItem('userId'));
+  const [selectedMessageId, setSelectedMessageId] = useState(null);
+  const [editingMessage, setEditingMessage] = useState(null);
 
   useEffect(() => {
     console.log('현재 채팅방 ID:', chatRoomId);
@@ -171,6 +173,46 @@ const ChatRoom = () => {
     // chatRoomId가 변경될 때 메시지 상태 초기화
     setMessages([]);
   }, [chatRoomId]);
+
+  const handleNewMessage = useCallback((receivedMessage) => {
+    setMessages((prevMessages) => {
+      // 중복 메시지 체크
+      if (
+        prevMessages.some((msg) => msg.messageId === receivedMessage.messageId)
+      ) {
+        // 메시지 타입에 따른 업데이트 처리
+        if (
+          receivedMessage.type === 'EDIT' ||
+          receivedMessage.type === 'DELETE'
+        ) {
+          return prevMessages.map((msg) =>
+            msg.messageId === receivedMessage.messageId
+              ? {
+                  ...receivedMessage,
+                  createdAt: new Date(receivedMessage.createdAt),
+                }
+              : msg
+          );
+        }
+        return prevMessages;
+      }
+
+      // 에러 메시지 처리
+      if (receivedMessage.type === 'ERROR') {
+        alert(receivedMessage.content);
+        return prevMessages;
+      }
+
+      // 새 메시지 추가
+      return [
+        ...prevMessages,
+        {
+          ...receivedMessage,
+          createdAt: new Date(receivedMessage.createdAt),
+        },
+      ];
+    });
+  }, []);
 
   useEffect(() => {
     const client = new Client({
@@ -191,53 +233,16 @@ const ChatRoom = () => {
 
       // 채팅방 메시지 구독
       client.subscribe(`/sub/${chatRoomId}/chat`, (message) => {
-        const receivedMessage = JSON.parse(message.body);
-
-        // 메시지 수정 이벤트 처리
-        if (receivedMessage.type === 'EDIT') {
-          setMessages((prev) =>
-            prev.map((msg) =>
-              msg.messageId === receivedMessage.messageId
-                ? { ...msg, content: receivedMessage.content }
-                : msg
-            )
-          );
-          return;
-        }
-
-        // 메시지 삭제 이벤트 처리
-        if (receivedMessage.type === 'DELETE') {
-          setMessages((prev) =>
-            prev.filter((msg) => msg.messageId !== receivedMessage.messageId)
-          );
-          return;
-        }
-
-        // 시스템 메시지 처리
-        if (typeof receivedMessage === 'string') {
-          setMessages((prev) => [
-            ...prev,
-            {
-              content: receivedMessage,
-            },
-          ]);
-          return;
-        }
-
-        // 중복 메시지 체크 추가
-        setMessages((prev) => {
-          // 이미 같은 messageId를 가진 메시지가 있다면 추가하지 않음
-          if (prev.some((msg) => msg.messageId === receivedMessage.messageId)) {
-            return prev;
+        try {
+          const receivedMessage = JSON.parse(message.body);
+          if (receivedMessage.type === 'ERROR') {
+            alert(receivedMessage.content);
+            return;
           }
-          return [
-            ...prev,
-            {
-              ...receivedMessage,
-              createdAt: new Date(receivedMessage.createdAt),
-            },
-          ];
-        });
+          handleNewMessage(receivedMessage);
+        } catch (error) {
+          console.error('메시지 처리 실패:', error);
+        }
       });
 
       // 개인 알림 구독 추가
@@ -265,7 +270,7 @@ const ChatRoom = () => {
         client.deactivate();
       }
     };
-  }, [chatRoomId, navigate]);
+  }, [chatRoomId, navigate, handleNewMessage]);
 
   useEffect(() => {
     // 채팅방 정보 가져오기
@@ -336,14 +341,6 @@ const ChatRoom = () => {
     const userId = localStorage.getItem('userId');
     const userName = localStorage.getItem('userName');
 
-    const newMessage = {
-      content: messageContent,
-    };
-
-    // 즉시 메시지 목록에 추가
-    setMessages((prev) => [...prev, newMessage]);
-
-    // 웹소켓을 통한 메시지 브로드캐스트
     stompClient.publish({
       destination: `/pub/${chatRoomId}/send`,
       body: messageContent,
