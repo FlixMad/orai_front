@@ -1,6 +1,5 @@
-import React, { useEffect, useRef } from 'react';
 import styled from 'styled-components';
-import { useState, forwardRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import axiosInstance from '../../configs/axios-config';
 import { API_BASE_URL, CHAT } from '../../configs/host-config';
 import PropTypes from 'prop-types';
@@ -148,14 +147,16 @@ const EditedMark = styled.span`
 `;
 
 const MessageList = ({ messages, setMessages, formatDate, chatRoomId }) => {
-  const messagesEndRef = useRef(null);
   const [selectedMessageId, setSelectedMessageId] = useState(null);
   const [editingMessage, setEditingMessage] = useState(null);
   const [editContent, setEditContent] = useState('');
   const currentUserId = localStorage.getItem('userId');
+  const containerRef = useRef(null);
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (containerRef.current) {
+      containerRef.current.scrollTop = containerRef.current.scrollHeight;
+    }
   };
 
   useEffect(() => {
@@ -210,7 +211,7 @@ const MessageList = ({ messages, setMessages, formatDate, chatRoomId }) => {
   };
 
   return (
-    <MessageListContainer>
+    <MessageListContainer ref={containerRef}>
       {messages.map((message) => {
         const isMine = message.senderId === currentUserId;
         const isSystem = message.type === 'SYSTEM';
@@ -288,7 +289,6 @@ const MessageList = ({ messages, setMessages, formatDate, chatRoomId }) => {
           </MessageItem>
         );
       })}
-      <div ref={messagesEndRef} />
     </MessageListContainer>
   );
 };
