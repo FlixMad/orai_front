@@ -207,13 +207,20 @@ const ChatRoom = () => {
           return;
         }
 
-        setMessages((prev) => [
-          ...prev,
-          {
-            ...receivedMessage,
-            createdAt: new Date(receivedMessage.createdAt),
-          },
-        ]);
+        // 중복 메시지 체크 추가
+        setMessages((prev) => {
+          // 이미 같은 messageId를 가진 메시지가 있다면 추가하지 않음
+          if (prev.some((msg) => msg.messageId === receivedMessage.messageId)) {
+            return prev;
+          }
+          return [
+            ...prev,
+            {
+              ...receivedMessage,
+              createdAt: new Date(receivedMessage.createdAt),
+            },
+          ];
+        });
       });
 
       // 개인 알림 구독 추가
@@ -228,9 +235,13 @@ const ChatRoom = () => {
 
     client.activate();
 
-    // 초기 데이터 로드
-    fetchParticipants();
-    fetchMessages();
+    // 초기 데이터 로드 - 순차적으로 실행되도록 수정
+    const loadInitialData = async () => {
+      await fetchParticipants(); // 참가자 목록을 먼저 로드
+      await fetchMessages(); // 그 다음 메시지 로드
+    };
+
+    loadInitialData();
 
     return () => {
       if (client) {
@@ -280,9 +291,11 @@ const ChatRoom = () => {
           const sender = participants.find(
             (p) => p.userId === message.senderId
           );
+          // sender가 없는 경우 message의 원본 senderName을 사용
           return {
             ...message,
-            senderName: sender?.name || '알 수 없음',
+            senderName:
+              sender?.senderName || message.senderName || '알 수 없음',
             createdAt: new Date(message.createdAt.replace(' ', 'T')),
           };
         });
@@ -315,25 +328,6 @@ const ChatRoom = () => {
         userName: userName,
       },
     });
-
-    // REST API를 통한 메시지 저장
-    axiosInstance
-      .post(`${API_BASE_URL}${CHAT}/${chatRoomId}/saveMessage`, {
-        content: messageContent,
-      })
-      .then((response) => {
-        // 메시지 저장이 성공하면 메시지 리스트 업데이트
-        setMessages((prevMessages) => [
-          ...prevMessages,
-          {
-            ...response.data,
-            createdAt: new Date(response.data.createdAt),
-          },
-        ]);
-      })
-      .catch((error) => {
-        console.error('메시지 저장 중 오류가 발생했습니다:', error);
-      });
 
     setMessageContent('');
   };

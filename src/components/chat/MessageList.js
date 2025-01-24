@@ -161,66 +161,96 @@ const MessageList = ({ messages, setMessages, formatDate, chatRoomId }) => {
   }, [messages, isInitialLoad, currentUserId, page]);
 
   const loadMoreMessages = useCallback(async () => {
-    if (loading || !hasMore || page <= 0) return;
+    if (loading || !hasMore || page < 0) return;
 
     try {
       setLoading(true);
       setPrevScrollHeight(containerRef.current?.scrollHeight || 0);
 
       const response = await axiosInstance.get(
-        `${API_BASE_URL}${CHAT}/${chatRoomId}/messageList?page=${page}`
+        `${API_BASE_URL}${CHAT}/${chatRoomId}/messageList`,
+        {
+          params: {
+            page: page,
+            size: 30,
+          },
+        }
       );
 
       if (response?.data) {
-        if (response.data.length < 30) {
+        // 데이터가 비어있으면 더 이상 로드할 메시지가 없음
+        if (response.data.length === 0) {
           setHasMore(false);
+          return;
         }
 
         setPage((prev) => prev + 1);
 
-        // 중복 메시지 제거 및 정렬
+        // 메시지 추가 로직 개선
         setMessages((prevMessages) => {
           const newMessages = response.data.filter(
             (newMsg) =>
               !prevMessages.some((msg) => msg.messageId === newMsg.messageId)
           );
-          return [...newMessages, ...prevMessages].sort(
-            (a, b) => new Date(a.createdAt) - new Date(b.createdAt)
-          );
+          // 백엔드에서 이미 createdAt 기준 오름차순 정렬되어 오므로
+          // 새 메시지를 뒤쪽에 추가
+          return [...prevMessages, ...newMessages];
         });
       }
     } catch (error) {
       console.error('메시지 로딩 실패:', error);
+      setHasMore(false);
     } finally {
       setLoading(false);
     }
   }, [page, loading, hasMore, chatRoomId]);
 
+  // 스크롤 이벤트 핸들러 개선
   const handleScroll = useCallback(() => {
-    if (!containerRef.current) return;
+    if (!containerRef.current || loading || !hasMore) return;
 
-    const { scrollTop, scrollHeight, clientHeight } = containerRef.current;
-    const scrollPercentage = (scrollTop / (scrollHeight - clientHeight)) * 100;
+    const { scrollTop } = containerRef.current;
 
-    // 스크롤이 상단 10% 이내일 때 이전 메시지 로드
-    if (scrollPercentage < 10 && !loading && hasMore) {
+    // 스크롤이 하단에 가까워졌을 때 다음 페이지 로드
+    if (scrollTop < 100) {
       loadMoreMessages();
     }
   }, [loadMoreMessages, loading, hasMore]);
 
-  // 스크롤 이벤트에 쓰로틀 적용
-  const throttledHandleScroll = useCallback(_.throttle(handleScroll, 300), [
-    handleScroll,
-  ]);
+  // 초기 로드 시 스크롤 위치 조정
+  useEffect(() => {
+    if (!containerRef.current || messages.length === 0) return;
 
+    // 초기 로드 시 또는 본인이 보낸 메시지일 경우 항상 맨 아래로 스크롤
+    if (
+      isInitialLoad ||
+      messages[messages.length - 1]?.senderId === currentUserId
+    ) {
+      containerRef.current.scrollTop = containerRef.current.scrollHeight;
+      setIsInitialLoad(false);
+      return;
+    }
+
+    // 이전 메시지 로드 시 스크롤 위치 유지
+    if (prevScrollHeight > 0 && page > 1) {
+      const newScrollHeight = containerRef.current.scrollHeight;
+      const scrollDiff = newScrollHeight - prevScrollHeight;
+      containerRef.current.scrollTop = scrollDiff;
+    }
+  }, [messages, isInitialLoad, currentUserId, page, prevScrollHeight]);
+
+  // 스크롤 이벤트 리스너 등록
   useEffect(() => {
     const container = containerRef.current;
     if (container) {
-      container.addEventListener('scroll', throttledHandleScroll);
-      return () =>
-        container.removeEventListener('scroll', throttledHandleScroll);
+      const throttledScroll = _.throttle(handleScroll, 200);
+      container.addEventListener('scroll', throttledScroll);
+      return () => {
+        container.removeEventListener('scroll', throttledScroll);
+        throttledScroll.cancel();
+      };
     }
-  }, [throttledHandleScroll]);
+  }, [handleScroll]);
 
   const formatMessageDate = (date) => {
     // date가 문자열인 경우에만 변환
@@ -265,6 +295,12 @@ const MessageList = ({ messages, setMessages, formatDate, chatRoomId }) => {
 
   const handleDelete = async () => {
     try {
+      const confirmed = window.confirm('정말 이 메시지를 삭제하시겠습니까?');
+      if (!confirmed) {
+        setContextMenu(null);
+        return;
+      }
+
       await axiosInstance.delete(
         `${API_BASE_URL}${CHAT}/${contextMenu.chatRoomId}/${contextMenu.messageId}/deleteMessage`
       );
@@ -303,7 +339,7 @@ const MessageList = ({ messages, setMessages, formatDate, chatRoomId }) => {
           >
             <MessageWrapper $isMine={isMine} $isSystem={isSystem}>
               {!isMine && !isSystem && (
-                <SenderName>{message.senderName || '누구냐 넌'}</SenderName>
+                <SenderName>{message.senderName || '알 수 없음'}</SenderName>
               )}
               <MessageContent
                 $isMine={isMine}
