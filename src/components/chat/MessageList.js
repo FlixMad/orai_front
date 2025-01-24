@@ -41,7 +41,7 @@ const MessageContent = styled.div`
     $isDeleted
       ? theme.colors.background2
       : $isSystem
-      ? theme.colors.background2
+      ? theme.colors.background0
       : $isMine
       ? theme.colors.primary
       : theme.colors.background2};
