@@ -1,14 +1,14 @@
-import styled from "styled-components";
-import Header from "./Header";
-import Sidebar from "./Sidebar";
-import { useSidebar } from "../../context/SidebarContext";
-import ChatList from "../../pages/chat/ChatList";
-import { useLocation } from "react-router-dom";
+import styled from 'styled-components';
+import Header from './Header';
+import Sidebar from './Sidebar';
+import { useSidebar } from '../../context/SidebarContext';
+import ChatRoomList from '../../pages/chat/ChatRoomList';
+import { useLocation } from 'react-router-dom';
 
 const Layout = ({ children }) => {
   const { isOpen } = useSidebar();
   const location = useLocation();
-  const isChatRoute = location.pathname.startsWith("/chat");
+  const isChatRoute = location.pathname.startsWith('/chat');
 
   return (
     <LayoutContainer>
@@ -40,9 +40,9 @@ const MainSection = styled.div`
 
 const MainContent = styled.div`
   position: fixed;
-  left: ${({ $isOpen }) => ($isOpen ? "15vw" : "2vw")};
+  left: ${({ $isOpen }) => ($isOpen ? '15vw' : '2vw')};
   top: 1vh;
-  right: ${({ $isOpen }) => ($isOpen ? "0vw" : "2vw")};
+  right: ${({ $isOpen }) => ($isOpen ? '0vw' : '2vw')};
   bottom: 1vh;
   transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1),
     right 0.3s cubic-bezier(0.4, 0, 0.2, 1),
@@ -73,7 +73,7 @@ const MainContainer = styled.div`
   }
 `;
 
-const ChatListPanel = styled(ChatList)`
+const ChatListPanel = styled(ChatRoomList)`
   width: 320px;
   min-width: 320px;
   border-right: 1px solid ${({ theme }) => theme.colors.border};
@@ -88,7 +88,7 @@ const Content = styled.main`
   flex: 1;
   overflow-y: auto;
   background: white;
-  padding: ${({ isChatRoute }) => (isChatRoute ? "0" : "24px")};
+  padding: ${({ isChatRoute }) => (isChatRoute ? '0' : '24px')};
   border-top-right-radius: 12px;
   border-bottom-right-radius: 12px;
   transition: padding 0.3s cubic-bezier(0.4, 0, 0.2, 1);
