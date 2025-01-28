@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
 import axiosInstance from '../../configs/axios-config';
@@ -150,6 +150,12 @@ const ModalTitle = styled.h2`
   margin-bottom: 16px;
 `;
 
+const LoadingIndicator = styled.div`
+  text-align: center;
+  padding: 1rem;
+  color: ${({ theme }) => theme.colors.text2};
+`;
+
 const ChatRoom = () => {
   const { chatRoomId } = useParams();
   const [messages, setMessages] = useState([]);
@@ -162,6 +168,7 @@ const ChatRoom = () => {
   const [selectedUsers, setSelectedUsers] = useState([]);
   const navigate = useNavigate();
   const [currentUserId] = useState(localStorage.getItem('userId'));
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     console.log('현재 채팅방 ID:', chatRoomId);
@@ -171,6 +178,59 @@ const ChatRoom = () => {
     // chatRoomId가 변경될 때 메시지 상태 초기화
     setMessages([]);
   }, [chatRoomId]);
+
+  const handleNewMessage = useCallback((receivedMessage) => {
+    setMessages((prevMessages) => {
+      if (
+        prevMessages.some((msg) => msg.messageId === receivedMessage.messageId)
+      ) {
+        if (
+          receivedMessage.type === 'EDIT' ||
+          receivedMessage.type === 'DELETE'
+        ) {
+          return prevMessages.map((msg) =>
+            msg.messageId === receivedMessage.messageId
+              ? {
+                  ...receivedMessage,
+                  createdAt: new Date(receivedMessage.createdAt),
+                }
+              : msg
+          );
+        }
+        return prevMessages;
+      }
+
+      if (receivedMessage.type === 'ERROR') {
+        return prevMessages;
+      }
+
+      return [
+        ...prevMessages,
+        {
+          ...receivedMessage,
+          createdAt: new Date(receivedMessage.createdAt),
+        },
+      ];
+    });
+  }, []);
+
+  // 초기 메시지 로드 수정
+  const loadInitialMessages = async () => {
+    try {
+      setIsLoading(true);
+      const response = await axiosInstance.get(
+        `${API_BASE_URL}${CHAT}/${chatRoomId}/messageList`
+      );
+
+      if (response.data.length > 0) {
+        setMessages(response.data);
+      }
+    } catch (error) {
+      console.error('초기 메시지 로드 실패:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
     const client = new Client({
@@ -188,38 +248,24 @@ const ChatRoom = () => {
 
     client.onConnect = () => {
       setStompClient(client);
-
-      // 채팅방 메시지 구독
       client.subscribe(`/sub/${chatRoomId}/chat`, (message) => {
-        const receivedMessage = JSON.parse(message.body);
+        try {
+          const receivedMessage = JSON.parse(message.body);
+          if (receivedMessage.type === 'ERROR') return;
 
-        // 시스템 메시지 처리
-        if (typeof receivedMessage === 'string') {
-          setMessages((prev) => [
-            ...prev,
-            {
-              messageId: Date.now(),
-              content: receivedMessage,
-              type: 'SYSTEM',
-              createdAt: new Date(),
-            },
-          ]);
-          return;
+          // 메시지를 받았을 때 읽음 처리
+          if (document.hasFocus()) {
+            markMessageAsRead(receivedMessage.messageId);
+          }
+
+          handleNewMessage(receivedMessage);
+        } catch (error) {
+          console.error('메시지 처리 실패:', error);
         }
-
-        setMessages((prev) => [
-          ...prev,
-          {
-            ...receivedMessage,
-            createdAt: new Date(receivedMessage.createdAt),
-          },
-        ]);
       });
 
-      // 개인 알림 구독 추가
       client.subscribe(`/queue/queue`, (notification) => {
         const data = JSON.parse(notification.body);
-        // 채팅방 삭제 등의 알림 처리
         if (data.chatRoomId === chatRoomId) {
           navigate('/chat');
         }
@@ -228,16 +274,37 @@ const ChatRoom = () => {
 
     client.activate();
 
-    // 초기 데이터 로드
-    fetchParticipants();
-    fetchMessages();
+    // 채팅방 입장 시 초기 데이터 로드
+    const loadInitialData = async () => {
+      try {
+        await fetchParticipants();
+        await loadInitialMessages();
+
+        // 채팅방 입장 시 마지막 메시지 읽음 처리 추가
+        const response = await axiosInstance.get(
+          `${API_BASE_URL}${CHAT}/${chatRoomId}/messageList`
+        );
+
+        if (response.data.length > 0) {
+          const lastMessage = response.data[response.data.length - 1];
+          await axiosInstance.post(
+            `${API_BASE_URL}${CHAT}/rooms/${chatRoomId}/read`,
+            { messageId: lastMessage.messageId }
+          );
+        }
+      } catch (error) {
+        console.error('초기 데이터 로드 실패:', error);
+      }
+    };
+
+    loadInitialData();
 
     return () => {
       if (client) {
         client.deactivate();
       }
     };
-  }, [chatRoomId, navigate]);
+  }, [chatRoomId]);
 
   useEffect(() => {
     // 채팅방 정보 가져오기
@@ -270,29 +337,6 @@ const ChatRoom = () => {
     }
   };
 
-  const fetchMessages = async () => {
-    try {
-      const response = await axiosInstance.get(
-        `${API_BASE_URL}${CHAT}/${chatRoomId}/messageList`
-      );
-      if (response && response.data) {
-        const formattedMessages = response.data.map((message) => {
-          const sender = participants.find(
-            (p) => p.userId === message.senderId
-          );
-          return {
-            ...message,
-            senderName: sender?.name || '알 수 없음',
-            createdAt: new Date(message.createdAt.replace(' ', 'T')),
-          };
-        });
-        setMessages(formattedMessages);
-      }
-    } catch (error) {
-      console.error('메시지 목록을 불러오는데 실패했습니다:', error);
-    }
-  };
-
   const formatDate = (date) => {
     return new Date(date).toLocaleTimeString('ko-KR', {
       hour: '2-digit',
@@ -300,43 +344,30 @@ const ChatRoom = () => {
     });
   };
 
-  const handleSendMessage = () => {
-    if (!messageContent.trim() || !stompClient) return;
+  const handleSendMessage = useCallback(async () => {
+    if (!messageContent.trim()) return;
 
-    const userId = localStorage.getItem('userId');
-    const userName = localStorage.getItem('userName');
+    try {
+      if (stompClient && stompClient.connected) {
+        const userId = localStorage.getItem('userId');
+        const userName = localStorage.getItem('userName');
 
-    // 웹소켓을 통한 메시지 브로드캐스트
-    stompClient.publish({
-      destination: `/pub/${chatRoomId}/send`,
-      body: messageContent,
-      headers: {
-        userId: userId,
-        userName: userName,
-      },
-    });
-
-    // REST API를 통한 메시지 저장
-    axiosInstance
-      .post(`${API_BASE_URL}${CHAT}/${chatRoomId}/saveMessage`, {
-        content: messageContent,
-      })
-      .then((response) => {
-        // 메시지 저장이 성공하면 메시지 리스트 업데이트
-        setMessages((prevMessages) => [
-          ...prevMessages,
-          {
-            ...response.data,
-            createdAt: new Date(response.data.createdAt),
+        stompClient.publish({
+          destination: `/pub/${chatRoomId}/send`,
+          headers: {
+            userId: userId,
+            userName: userName,
           },
-        ]);
-      })
-      .catch((error) => {
-        console.error('메시지 저장 중 오류가 발생했습니다:', error);
-      });
+          body: messageContent,
+        });
 
-    setMessageContent('');
-  };
+        setMessageContent('');
+      }
+    } catch (error) {
+      console.error('메시지 전송 실패:', error);
+      alert('메시지 전송에 실패했습니다.');
+    }
+  }, [messageContent, stompClient, chatRoomId]);
 
   const handleKeyPress = (e) => {
     if (e.key === 'Enter') {
@@ -428,6 +459,31 @@ const ChatRoom = () => {
     }
   };
 
+  // 메시지 읽음 처리 함수
+  const markMessageAsRead = async (messageId) => {
+    try {
+      await axiosInstance.post(
+        `${API_BASE_URL}${CHAT}/rooms/${chatRoomId}/read`,
+        { messageId }
+      );
+    } catch (error) {
+      console.error('메시지 읽음 처리 실패:', error);
+    }
+  };
+
+  // 창이 포커스를 받았을 때 마지막 메시지 읽음 처리
+  useEffect(() => {
+    const handleFocus = () => {
+      if (messages.length > 0) {
+        const lastMessage = messages[messages.length - 1];
+        markMessageAsRead(lastMessage.messageId);
+      }
+    };
+
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [messages, chatRoomId]);
+
   return (
     <ChatRoomContainer>
       <ChatHeader>
@@ -462,6 +518,9 @@ const ChatRoom = () => {
         </ChatRoomInfo>
       </ChatHeader>
       <ChatContent>
+        {isLoading && (
+          <LoadingIndicator>메시지를 불러오는 중...</LoadingIndicator>
+        )}
         <MessageList
           messages={messages}
           setMessages={setMessages}

@@ -28,6 +28,7 @@ const ChatRoomList = ({ onChatRoomCreated }) => {
   const [name, setName] = useState('');
   const [image, setImage] = useState('');
   const [selectedUsers, setSelectedUsers] = useState([]);
+  const [chatRoomDetails, setChatRoomDetails] = useState({});
 
   useEffect(() => {
     const debounceTimeout = setTimeout(() => {
@@ -64,13 +65,16 @@ const ChatRoomList = ({ onChatRoomCreated }) => {
       // 채팅방 업데이트 구독 추가
       if (currentChatId) {
         client.subscribe(`/sub/${currentChatId}/chat`, (message) => {
-          const notification = message.body;
-          alert(notification); // 채팅방 업데이트 알림 표시
-          fetchChatRooms(); // 채팅방 목록 새로고침
+          const messageData = JSON.parse(message.body);
+
+          // 메시지를 받았을 때 채팅방 목록 새로고침
+          if (messageData.type === 'CHAT') {
+            fetchChatRooms();
+          }
         });
       }
 
-      client.subscribe(`/user/queue`, (notification) => {
+      client.subscribe(`/queue/queue`, (notification) => {
         const data = JSON.parse(notification.body);
         // 채팅방 삭제 알림 처리
         alert(data.message);
@@ -89,12 +93,31 @@ const ChatRoomList = ({ onChatRoomCreated }) => {
 
   const fetchChatRooms = async () => {
     try {
-      const response = await axiosInstance.get(
+      // 기본 채팅방 정보 조회 (이미지, 이름)
+      const basicResponse = await axiosInstance.get(
         `${API_BASE_URL}${CHAT}/chatRoomList`
       );
-      if (response.status === 200) {
-        setChatRooms(response.data);
-        setFilteredChatRooms(response.data);
+
+      // 읽지 않은 메시지 수와 마지막 메시지 조회
+      const unreadResponse = await axiosInstance.get(
+        `${API_BASE_URL}${CHAT}/rooms/unread`
+      );
+
+      if (basicResponse.status === 200 && unreadResponse.status === 200) {
+        // 두 응답의 데이터를 병합
+        const mergedRooms = basicResponse.data.map((basicRoom) => {
+          const unreadInfo = unreadResponse.data.find(
+            (unreadRoom) => unreadRoom.chatRoomId === basicRoom.chatRoomId
+          );
+          return {
+            ...basicRoom,
+            lastMessage: unreadInfo?.lastMessage,
+            unreadCount: unreadInfo?.unreadCount || 0,
+          };
+        });
+
+        setChatRooms(mergedRooms);
+        setFilteredChatRooms(mergedRooms);
       }
     } catch (error) {
       console.error('채팅방 목록 조회 실패: ', error);
@@ -233,12 +256,6 @@ const ChatRoomList = ({ onChatRoomCreated }) => {
         fetchChatRooms();
       }
     } catch (error) {
-      console.error('채팅방 수정 실패 상세:', {
-        status: error?.response?.status,
-        data: error?.response?.data,
-        message: error?.message,
-      });
-
       if (error?.response?.status === 500) {
         alert('채팅방 수정 권한이 없습니다.');
       } else if (error?.response?.status === 404) {
@@ -281,8 +298,18 @@ const ChatRoomList = ({ onChatRoomCreated }) => {
     }
   };
 
-  const handleChatRoomClick = (chatRoomId) => {
-    navigate(`/chat/${chatRoomId}`);
+  const handleChatRoomClick = async (chatRoomId) => {
+    try {
+      // 채팅방 입장 권한 확인
+      await axiosInstance.get(`${API_BASE_URL}${CHAT}/${chatRoomId}/chatRoom`);
+      navigate(`/chat/${chatRoomId}`);
+    } catch (error) {
+      if (error.response?.status === 400) {
+        alert('해당 채팅방에 참여할 권한이 없습니다.');
+      } else {
+        alert('채팅방에 입장할 수 없습니다.');
+      }
+    }
   };
 
   return (
@@ -334,11 +361,16 @@ const ChatRoomList = ({ onChatRoomCreated }) => {
               <RoomInfo>
                 <RoomTitle>{room.name}</RoomTitle>
                 <LastMessage>
-                  {room.createdAt || '새로운 채팅방입니다.'}
+                  {(room.lastMessage || '새로운 채팅방입니다.').length > 25
+                    ? `${(room.lastMessage || '새로운 채팅방입니다.').slice(
+                        0,
+                        20
+                      )}...`
+                    : room.lastMessage || '새로운 채팅방입니다.'}
                 </LastMessage>
               </RoomInfo>
-              {room.chatRoomId > 0 && (
-                <UnreadBadge>{room.chatRoomId}</UnreadBadge>
+              {room.unreadCount > 0 && (
+                <UnreadBadge>{room.unreadCount}</UnreadBadge>
               )}
             </ChatRoom>
           ))}

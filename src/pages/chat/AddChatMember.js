@@ -57,27 +57,29 @@ const AddChatMember = ({
           }
         );
 
-        const userData = response.data.result.content || [];
+        const userData = response.data?.result?.content || [];
         const currentUserId = localStorage.getItem('userId');
-        const participantIds = currentParticipants.map((p) => p.userId);
+        const participantIds = currentParticipants?.map((p) => p.userId) || [];
 
         setUsers(
           userData
             .filter(
               (user) =>
-                user.userId !== currentUserId &&
-                !participantIds.includes(user.userId)
+                user?.userId !== currentUserId &&
+                !participantIds.includes(user?.userId)
             )
             .map((user) => ({
-              id: user.userId,
-              name: user.name,
-              department: user.departmentId || '미지정',
-              profileImage: user.profileImage || '/images/profiles/default.jpg',
+              id: user?.userId,
+              name: user?.name || '이름 없음',
+              department: user?.departmentId || '미지정',
+              profileImage:
+                user?.profileImage || '/images/profiles/default.jpg',
             }))
         );
         setPage(-1);
       } catch (error) {
         console.error('사용자 검색 실패:', error);
+        setUsers([]);
       } finally {
         setLoading(false);
       }
@@ -111,22 +113,22 @@ const AddChatMember = ({
           }
         );
 
-        const userData = response.data.result.content || [];
-        const isLast = response.data.result.last;
+        const userData = response.data?.result?.content || [];
+        const isLast = response.data?.result?.last ?? true;
         const currentUserId = localStorage.getItem('userId');
-        const participantIds = currentParticipants.map((p) => p.userId);
+        const participantIds = currentParticipants?.map((p) => p.userId) || [];
 
         const formattedUsers = userData
           .filter(
             (user) =>
-              user.userId !== currentUserId &&
-              !participantIds.includes(user.userId)
+              user?.userId !== currentUserId &&
+              !participantIds.includes(user?.userId)
           )
           .map((user) => ({
-            id: user.userId,
-            name: user.name,
-            department: user.departmentId || '미지정',
-            profileImage: user.profileImage || '/images/profiles/default.jpg',
+            id: user?.userId,
+            name: user?.name || '이름 없음',
+            department: user?.departmentId || '미지정',
+            profileImage: user?.profileImage || '/images/profiles/default.jpg',
           }));
 
         setUsers((prev) =>
@@ -135,6 +137,8 @@ const AddChatMember = ({
         setHasMore(!isLast);
       } catch (error) {
         console.error('사용자 목록 조회 실패:', error);
+        setUsers([]);
+        setHasMore(false);
       } finally {
         setLoading(false);
       }
