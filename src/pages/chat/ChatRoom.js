@@ -252,6 +252,12 @@ const ChatRoom = () => {
         try {
           const receivedMessage = JSON.parse(message.body);
           if (receivedMessage.type === 'ERROR') return;
+
+          // 메시지를 받았을 때 읽음 처리
+          if (document.hasFocus()) {
+            markMessageAsRead(receivedMessage.messageId);
+          }
+
           handleNewMessage(receivedMessage);
         } catch (error) {
           console.error('메시지 처리 실패:', error);
@@ -270,8 +276,25 @@ const ChatRoom = () => {
 
     // 채팅방 입장 시 초기 데이터 로드
     const loadInitialData = async () => {
-      await fetchParticipants();
-      await loadInitialMessages();
+      try {
+        await fetchParticipants();
+        await loadInitialMessages();
+
+        // 채팅방 입장 시 마지막 메시지 읽음 처리 추가
+        const response = await axiosInstance.get(
+          `${API_BASE_URL}${CHAT}/${chatRoomId}/messageList`
+        );
+
+        if (response.data.length > 0) {
+          const lastMessage = response.data[response.data.length - 1];
+          await axiosInstance.post(
+            `${API_BASE_URL}${CHAT}/rooms/${chatRoomId}/read`,
+            { messageId: lastMessage.messageId }
+          );
+        }
+      } catch (error) {
+        console.error('초기 데이터 로드 실패:', error);
+      }
     };
 
     loadInitialData();
@@ -435,6 +458,31 @@ const ChatRoom = () => {
       }
     }
   };
+
+  // 메시지 읽음 처리 함수
+  const markMessageAsRead = async (messageId) => {
+    try {
+      await axiosInstance.post(
+        `${API_BASE_URL}${CHAT}/rooms/${chatRoomId}/read`,
+        { messageId }
+      );
+    } catch (error) {
+      console.error('메시지 읽음 처리 실패:', error);
+    }
+  };
+
+  // 창이 포커스를 받았을 때 마지막 메시지 읽음 처리
+  useEffect(() => {
+    const handleFocus = () => {
+      if (messages.length > 0) {
+        const lastMessage = messages[messages.length - 1];
+        markMessageAsRead(lastMessage.messageId);
+      }
+    };
+
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [messages, chatRoomId]);
 
   return (
     <ChatRoomContainer>
