@@ -1,16 +1,17 @@
-import React, { useState } from 'react';
-import styled from 'styled-components';
-import axiosInstance from '../../configs/axios-config'; // axios 설정 가져오기
-import { API_BASE_URL, USER } from '../../configs/host-config'; // API_BASE_URL과 USER 가져오기
-import { useNavigate } from 'react-router-dom'; // useNavigate 훅을 사용하여 페이지 이동 처리
+import React, { useState } from "react";
+import styled from "styled-components";
+import axiosInstance from "../../configs/axios-config"; // axios 설정 가져오기
+import { API_BASE_URL, USER } from "../../configs/host-config"; // API_BASE_URL과 USER 가져오기
+import { useNavigate } from "react-router-dom"; // useNavigate 훅을 사용하여 페이지 이동 처리
+import { initializeEventSource } from "../../components/layout/Sidebar"; // handleLoginSuccess 함수 임포트
 
 const Login = () => {
   const [formData, setFormData] = useState({
-    email: '', // email 필드 반영
-    password: '',
+    email: "", // email 필드 반영
+    password: "",
   });
 
-  const [errorMessage, setErrorMessage] = useState('');
+  const [errorMessage, setErrorMessage] = useState("");
   const navigate = useNavigate(); // 페이지 이동을 위한 navigate 변수 선언
 
   const handleChange = (e) => {
@@ -24,40 +25,29 @@ const Login = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      // API_BASE_URL과 USER를 사용하여 로그인 URL 설정
       const response = await axiosInstance.post(
-        `${API_BASE_URL}${USER}/api/users/login`, // 수정된 로그인 URL
-        formData // 로그인 데이터
+        `${API_BASE_URL}${USER}/api/users/login`,
+        formData
       );
 
-      console.log('로그인 성공:', response.data); // 백엔드 응답 데이터 확인
       const { token, userId, email, name, departmentId } = response.data;
 
-      // JWT 토큰 저장
-      localStorage.setItem('ACCESS_TOKEN', token);
+      localStorage.setItem("ACCESS_TOKEN", token);
+      localStorage.setItem("userId", userId);
+      localStorage.setItem("userEmail", email);
+      localStorage.setItem("userName", name);
+      localStorage.setItem("departmentId", departmentId);
 
-      // 유저 정보 저장 (선택적으로 추가)
-      localStorage.setItem('userId', userId);
-      localStorage.setItem('userEmail', email);
-      localStorage.setItem('userName', name);
-      localStorage.setItem('departmentId', departmentId);
+      // SSE 연결 설정은 handleLoginSuccess에서 처리
+      initializeEventSource();
 
-      // 페이지 이동 (window.location.href 대신 useNavigate 사용)
-      navigate('/dashboard');
+      navigate("/dashboard");
     } catch (error) {
-      console.error('로그인 실패:', error);
-
-      // 에러 처리
-      if (error.response) {
-        // 백엔드에서 반환된 에러 메시지 처리
-        setErrorMessage(
-          error.response.data.message ||
-            '로그인에 실패했습니다. ID와 PW를 확인해주세요.'
-        );
-      } else {
-        // 네트워크 또는 기타 에러 처리
-        setErrorMessage('서버와의 통신에 문제가 발생했습니다.');
-      }
+      console.error("로그인 실패:", error);
+      setErrorMessage(
+        error.response?.data?.message ||
+          "로그인에 실패했습니다. ID와 PW를 확인해주세요."
+      );
     }
   };
 
