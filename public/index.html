@@ -9,6 +9,32 @@
       name="description"
       content="Web site created using create-react-app"
     />
+    <script src="https://bundle.run/buffer@6.0.3"></script>
+    <script>
+      window.Buffer = buffer.Buffer;
+      window.process = {
+        env: { NODE_ENV: "development" },
+        nextTick: function (fn) {
+          setTimeout(fn, 0);
+        },
+        title: "browser",
+        browser: true,
+        version: "",
+        versions: {},
+        platform: "browser",
+        argv: [],
+        stdout: {},
+        stderr: {},
+        stdin: {},
+        _eventsCount: 0,
+        _maxListeners: undefined,
+        _events: {},
+        emit: function () {},
+        prependListener: function () {},
+        prependOnceListener: function () {},
+        reading: false,
+      };
+    </script>
     <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />
     <!--
       manifest.json provides metadata used when your web app is installed on a
