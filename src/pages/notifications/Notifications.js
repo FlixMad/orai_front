@@ -1,17 +1,39 @@
 import styled from "styled-components";
+import { API_BASE_URL, ETC } from "../../configs/host-config";
+import { useEffect, useState } from "react";
+import axiosInstance from "../../configs/axios-config";
 
 const Notifications = () => {
+  const [notifications, setNotifications] = useState([]);
+
+  useEffect(() => {
+    const fetchNotifications = async () => {
+      try {
+        const response = await axiosInstance.get(
+          `${API_BASE_URL}${ETC}/api/notifications`
+        );
+        setNotifications(response.data.result);
+      } catch (error) {
+        console.error("Failed to fetch notifications", error);
+      }
+    };
+
+    fetchNotifications();
+  }, []);
+
   return (
     <Container>
       <NotificationList>
-        <NotificationItem>
-          <Icon src="/images/icons/vacation.png" alt="휴가" />
-          <Content>
-            <Title>휴가 신청이 승인되었습니다</Title>
-            <Message>3월 15일 휴가 신청이 승인되었습니다.</Message>
-            <Time>1시간 전</Time>
-          </Content>
-        </NotificationItem>
+        {notifications.map((notification, index) => (
+          <NotificationItem key={index}>
+            <Icon src={notification.icon} alt={notification.title} />
+            <Content>
+              <Title>{notification.title}</Title>
+              <Message>{notification.message}</Message>
+              <Time>{notification.time}</Time>
+            </Content>
+          </NotificationItem>
+        ))}
       </NotificationList>
     </Container>
   );
