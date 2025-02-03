@@ -1,32 +1,32 @@
-import { useState, useEffect } from 'react';
-import styled from 'styled-components';
-import axiosInstance from '../../configs/axios-config';
-import { API_BASE_URL, CHAT } from '../../configs/host-config';
-import SockJS from 'sockjs-client';
-import { Client } from '@stomp/stompjs';
-import { useRecoilValue } from 'recoil';
-import { userState } from '../../atoms/userState';
-import { useNavigate, useLocation } from 'react-router-dom';
-import AddChatMember from './AddChatMember';
+import { useState, useEffect } from "react";
+import styled from "styled-components";
+import axiosInstance from "../../configs/axios-config";
+import { API_BASE_URL, CHAT } from "../../configs/host-config";
+import SockJS from "sockjs-client";
+import { Client } from "@stomp/stompjs";
+import { useRecoilValue } from "recoil";
+import { userState } from "../../atoms/userState";
+import { useNavigate, useLocation } from "react-router-dom";
+import AddChatMember from "./AddChatMember";
 
 const ChatRoomList = ({ onChatRoomCreated }) => {
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
   const [filteredChatRooms, setFilteredChatRooms] = useState([]);
   const navigate = useNavigate();
   const location = useLocation();
-  const currentChatId = location.pathname.split('/')[2];
+  const currentChatId = location.pathname.split("/")[2];
   const [chatRooms, setChatRooms] = useState([]);
   const [selectedRoom, setSelectedRoom] = useState(null);
   const [isManageModalOpen, setIsManageModalOpen] = useState(false);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
-  const [editRoomName, setEditRoomName] = useState('');
+  const [editRoomName, setEditRoomName] = useState("");
   const [editRoomImage, setEditRoomImage] = useState(null);
   const [stompClient, setStompClient] = useState(null);
   const currentUser = useRecoilValue(userState);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
-  const [name, setName] = useState('');
-  const [image, setImage] = useState('');
+  const [name, setName] = useState("");
+  const [image, setImage] = useState("");
   const [selectedUsers, setSelectedUsers] = useState([]);
   const [chatRoomDetails, setChatRoomDetails] = useState({});
 
@@ -47,9 +47,13 @@ const ChatRoomList = ({ onChatRoomCreated }) => {
     fetchChatRooms();
 
     const client = new Client({
-      webSocketFactory: () => new SockJS(`${API_BASE_URL}/stomp`),
+      webSocketFactory: () =>
+        new SockJS(`${API_BASE_URL}/stomp`, null, {
+          transports: ["websocket"],
+          secure: true,
+        }),
       connectHeaders: {
-        Authorization: `Bearer ${localStorage.getItem('ACCESS_TOKEN')}`,
+        Authorization: `Bearer ${localStorage.getItem("ACCESS_TOKEN")}`,
       },
       debug: function (str) {
         console.log(str);
@@ -68,7 +72,7 @@ const ChatRoomList = ({ onChatRoomCreated }) => {
           const messageData = JSON.parse(message.body);
 
           // 메시지를 받았을 때 채팅방 목록 새로고침
-          if (messageData.type === 'CHAT') {
+          if (messageData.type === "CHAT") {
             fetchChatRooms();
           }
         });
@@ -120,13 +124,13 @@ const ChatRoomList = ({ onChatRoomCreated }) => {
         setFilteredChatRooms(mergedRooms);
       }
     } catch (error) {
-      console.error('채팅방 목록 조회 실패: ', error);
+      console.error("채팅방 목록 조회 실패: ", error);
     }
   };
 
   const handleCloseModal = () => {
     setIsModalOpen(false);
-    setName('');
+    setName("");
     setImage(null);
     setCurrentStep(1);
     setSelectedUsers([]);
@@ -134,16 +138,16 @@ const ChatRoomList = ({ onChatRoomCreated }) => {
 
   const handleNext = () => {
     if (!name.trim() && !image) {
-      alert('채팅방 이름과 이미지를 입력해주세요.');
+      alert("채팅방 이름과 이미지를 입력해주세요.");
       return;
     }
 
     if (!name.trim()) {
-      alert('채팅방 이름을 입력해주세요.');
+      alert("채팅방 이름을 입력해주세요.");
       return;
     }
     if (!image) {
-      alert('채팅방 이미지를 선택해주세요.');
+      alert("채팅방 이미지를 선택해주세요.");
       return;
     }
     setCurrentStep(2);
@@ -162,7 +166,7 @@ const ChatRoomList = ({ onChatRoomCreated }) => {
     if (file) {
       if (file.size > 5 * 1024 * 1024) {
         // 5MB 제한
-        alert('파일 크기는 5MB 이하여야 합니다.');
+        alert("파일 크기는 5MB 이하여야 합니다.");
         return;
       }
       setImage(file);
@@ -172,24 +176,24 @@ const ChatRoomList = ({ onChatRoomCreated }) => {
   const handleCreateRoom = async (selectedUserIds) => {
     try {
       if (!name.trim()) {
-        setName('');
-        alert('채팅방 이름을 입력해주세요.');
+        setName("");
+        alert("채팅방 이름을 입력해주세요.");
         return;
       }
 
       const formData = new FormData();
-      formData.append('name', name);
+      formData.append("name", name);
       if (image) {
-        formData.append('image', image);
+        formData.append("image", image);
       }
-      formData.append('userIds', selectedUserIds);
+      formData.append("userIds", selectedUserIds);
 
       const response = await axiosInstance.post(
         `${API_BASE_URL}${CHAT}/createChatRoom`,
         formData,
         {
           headers: {
-            'Content-Type': 'multipart/form-data',
+            "Content-Type": "multipart/form-data",
           },
         }
       );
@@ -197,15 +201,15 @@ const ChatRoomList = ({ onChatRoomCreated }) => {
       if (response.status === 200) {
         const chatRoomData = response.data;
 
-        alert('채팅방이 생성되었습니다.');
+        alert("채팅방이 생성되었습니다.");
         handleCloseModal();
         onChatRoomCreated?.(chatRoomData);
         fetchChatRooms();
         navigate(`/chat/${chatRoomData.chatRoomId}`);
       }
     } catch (error) {
-      console.error('채팅방 생성 실패:', error);
-      alert('채팅방 생성에 실패했습니다. 다시 시도해주세요.');
+      console.error("채팅방 생성 실패:", error);
+      alert("채팅방 생성에 실패했습니다. 다시 시도해주세요.");
     }
   };
 
@@ -215,7 +219,7 @@ const ChatRoomList = ({ onChatRoomCreated }) => {
       if (!editRoomName.trim()) {
         setEditRoomName(selectedRoom.name);
         setEditRoomImage(selectedRoom.image);
-        alert('채팅방 제목이 너무 짧습니다.');
+        alert("채팅방 제목이 너무 짧습니다.");
         return;
       }
 
@@ -225,17 +229,17 @@ const ChatRoomList = ({ onChatRoomCreated }) => {
       ) {
         setEditRoomName(selectedRoom.name);
         setEditRoomImage(selectedRoom.image);
-        alert('변경된 내용이 없습니다.');
+        alert("변경된 내용이 없습니다.");
         return;
       }
 
       const formData = new FormData();
-      formData.append('name', editRoomName.trim() || selectedRoom.name);
+      formData.append("name", editRoomName.trim() || selectedRoom.name);
 
-      if (editRoomImage && typeof editRoomImage !== 'string') {
-        formData.append('image', editRoomImage);
+      if (editRoomImage && typeof editRoomImage !== "string") {
+        formData.append("image", editRoomImage);
       } else {
-        formData.append('image', selectedRoom.image);
+        formData.append("image", selectedRoom.image);
       }
 
       const response = await axiosInstance.put(
@@ -243,13 +247,13 @@ const ChatRoomList = ({ onChatRoomCreated }) => {
         formData,
         {
           headers: {
-            'Content-Type': 'multipart/form-data',
+            "Content-Type": "multipart/form-data",
           },
         }
       );
 
       if (response.status === 200) {
-        alert('채팅방이 수정되었습니다.');
+        alert("채팅방이 수정되었습니다.");
         setIsManageModalOpen(false);
         setEditRoomName(editRoomName);
         setEditRoomImage(editRoomImage);
@@ -257,11 +261,11 @@ const ChatRoomList = ({ onChatRoomCreated }) => {
       }
     } catch (error) {
       if (error?.response?.status === 500) {
-        alert('채팅방 수정 권한이 없습니다.');
+        alert("채팅방 수정 권한이 없습니다.");
       } else if (error?.response?.status === 404) {
-        alert('변경된 내용이 없거나 잘못된 요청입니다.');
+        alert("변경된 내용이 없거나 잘못된 요청입니다.");
       } else {
-        alert('채팅방 수정 권한이 없습니다.');
+        alert("채팅방 수정 권한이 없습니다.");
       }
     }
   };
@@ -275,25 +279,25 @@ const ChatRoomList = ({ onChatRoomCreated }) => {
 
       if (response.status === 204) {
         // noContent() 응답이므로 204 상태코드 확인
-        alert('채팅방이 삭제되었습니다.');
+        alert("채팅방이 삭제되었습니다.");
         setIsDeleteConfirmOpen(false);
         setIsManageModalOpen(false);
 
         if (currentChatId === `${selectedRoom.chatRoomId}`) {
-          navigate('/chat');
+          navigate("/chat");
         }
 
         fetchChatRooms();
       }
     } catch (error) {
-      console.error('채팅방 삭제 실패:', error);
+      console.error("채팅방 삭제 실패:", error);
       if (error?.response?.status === 500) {
-        alert('채팅방 삭제 권한이 없습니다.');
+        alert("채팅방 삭제 권한이 없습니다.");
       } else if (error?.response?.status === 404) {
-        alert('존재하지 않는 채팅방입니다.');
+        alert("존재하지 않는 채팅방입니다.");
         fetchChatRooms();
       } else {
-        alert('채팅방 삭제 권한이 없습니다.');
+        alert("채팅방 삭제 권한이 없습니다.");
       }
     }
   };
@@ -305,9 +309,9 @@ const ChatRoomList = ({ onChatRoomCreated }) => {
       navigate(`/chat/${chatRoomId}`);
     } catch (error) {
       if (error.response?.status === 400) {
-        alert('해당 채팅방에 참여할 권한이 없습니다.');
+        alert("해당 채팅방에 참여할 권한이 없습니다.");
       } else {
-        alert('채팅방에 입장할 수 없습니다.');
+        alert("채팅방에 입장할 수 없습니다.");
       }
     }
   };
@@ -361,12 +365,12 @@ const ChatRoomList = ({ onChatRoomCreated }) => {
               <RoomInfo>
                 <RoomTitle>{room.name}</RoomTitle>
                 <LastMessage>
-                  {(room.lastMessage || '새로운 채팅방입니다.').length > 25
-                    ? `${(room.lastMessage || '새로운 채팅방입니다.').slice(
+                  {(room.lastMessage || "새로운 채팅방입니다.").length > 25
+                    ? `${(room.lastMessage || "새로운 채팅방입니다.").slice(
                         0,
                         20
                       )}...`
-                    : room.lastMessage || '새로운 채팅방입니다.'}
+                    : room.lastMessage || "새로운 채팅방입니다."}
                 </LastMessage>
               </RoomInfo>
               {room.unreadCount > 0 && (
@@ -432,7 +436,7 @@ const ChatRoomList = ({ onChatRoomCreated }) => {
             <ImageInputWrapper>
               <ImagePreview>
                 {editRoomImage ? (
-                  typeof editRoomImage === 'string' ? (
+                  typeof editRoomImage === "string" ? (
                     <img src={editRoomImage} alt="채팅방 이미지" />
                   ) : (
                     <img
@@ -573,7 +577,7 @@ const ChatRoom = styled.div`
   cursor: pointer;
   position: relative;
   background: ${({ $active, theme }) =>
-    $active ? theme.colors.background2 : 'transparent'};
+    $active ? theme.colors.background2 : "transparent"};
   transition: all 0.2s ease;
   &:hover {
     background: ${({ theme }) => theme.colors.background2};
