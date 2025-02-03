@@ -70,6 +70,7 @@ const ChatRoomList = ({ onChatRoomCreated }) => {
       if (currentChatId) {
         client.subscribe(`/sub/${currentChatId}/chat`, (message) => {
           const messageData = JSON.parse(message.body);
+
           // 모든 메시지 타입에 대해 채팅방 목록 새로고침
           fetchChatRooms();
         });
