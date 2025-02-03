@@ -196,12 +196,13 @@ const ChatRoomList = ({ onChatRoomCreated }) => {
 
       if (response.status === 200) {
         const chatRoomData = response.data;
+        const chatRoomId = chatRoomData.chatRoomDto.chatRoomId;
 
         alert('채팅방이 생성되었습니다.');
         handleCloseModal();
         onChatRoomCreated?.(chatRoomData);
         fetchChatRooms();
-        navigate(`/chat/${chatRoomData.chatRoomId}`);
+        navigate(`/chat/${chatRoomId}`);
       }
     } catch (error) {
       console.error('채팅방 생성 실패:', error);
