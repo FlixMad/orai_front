@@ -1,26 +1,31 @@
-import { useState, useEffect } from 'react';
-import styled from 'styled-components';
-import axiosInstance from '../../configs/axios-config';
-import { API_BASE_URL, CHAT } from '../../configs/host-config';
-import AddChatMember from './AddChatMember';
-import { Client } from '@stomp/stompjs';
-import { useRecoilValue } from 'recoil';
-import { userState } from '../../atoms/userState';
+import { useState, useEffect } from "react";
+import styled from "styled-components";
+import axiosInstance from "../../configs/axios-config";
+import { API_BASE_URL, CHAT } from "../../configs/host-config";
+import SockJS from "sockjs-client";
+import AddChatMember from "./AddChatMember";
+import { Client } from "@stomp/stompjs";
+import { useRecoilValue } from "recoil";
+import { userState } from "../../atoms/userState";
 
 const CreateChatRoom = ({ onChatRoomCreated }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentStep, setCurrentStep] = useState(1); // 1: 기본 정보, 2: 멤버 선택
-  const [name, setName] = useState('');
-  const [image, setImage] = useState('');
+  const [name, setName] = useState("");
+  const [image, setImage] = useState("");
   const [selectedUsers, setSelectedUsers] = useState([]);
   const [stompClient, setStompClient] = useState(null);
   const currentUser = useRecoilValue(userState);
 
   useEffect(() => {
     const client = new Client({
-      brokerURL: `${API_BASE_URL}/stomp`,
+      webSocketFactory: () =>
+        new SockJS(`${API_BASE_URL}/stomp`, null, {
+          transports: ["websocket"],
+          secure: true,
+        }),
       connectHeaders: {
-        Authorization: `Bearer ${localStorage.getItem('ACCESS_TOKEN')}`,
+        Authorization: `Bearer ${localStorage.getItem("ACCESS_TOKEN")}`,
       },
       debug: function (str) {
         console.log(str);
@@ -45,7 +50,7 @@ const CreateChatRoom = ({ onChatRoomCreated }) => {
 
   const handleCloseModal = () => {
     setIsModalOpen(false);
-    setName('');
+    setName("");
     setImage(null);
     setCurrentStep(1);
     setSelectedUsers([]);
@@ -53,16 +58,16 @@ const CreateChatRoom = ({ onChatRoomCreated }) => {
 
   const handleNext = () => {
     if (!name.trim() && !image) {
-      alert('채팅방 이름과 이미지를 입력해주세요.');
+      alert("채팅방 이름과 이미지를 입력해주세요.");
       return;
     }
 
     if (!name.trim()) {
-      alert('채팅방 이름을 입력해주세요.');
+      alert("채팅방 이름을 입력해주세요.");
       return;
     }
     if (!image) {
-      alert('채팅방 이미지를 선택해주세요.');
+      alert("채팅방 이미지를 선택해주세요.");
       return;
     }
     setCurrentStep(2);
@@ -81,7 +86,7 @@ const CreateChatRoom = ({ onChatRoomCreated }) => {
     if (file) {
       if (file.size > 5 * 1024 * 1024) {
         // 5MB 제한
-        alert('파일 크기는 5MB 이하여야 합니다.');
+        alert("파일 크기는 5MB 이하여야 합니다.");
         return;
       }
       setImage(file);
@@ -91,24 +96,24 @@ const CreateChatRoom = ({ onChatRoomCreated }) => {
   const handleCreateRoom = async (selectedUserIds) => {
     try {
       if (!name.trim()) {
-        setName('');
-        alert('채팅방 이름을 입력해주세요.');
+        setName("");
+        alert("채팅방 이름을 입력해주세요.");
         return;
       }
 
       const formData = new FormData();
-      formData.append('name', name);
+      formData.append("name", name);
       if (image) {
-        formData.append('image', image);
+        formData.append("image", image);
       }
-      formData.append('userIds', selectedUserIds);
+      formData.append("userIds", selectedUserIds);
 
       const response = await axiosInstance.post(
         `${API_BASE_URL}${CHAT}/createChatRoom`,
         formData,
         {
           headers: {
-            'Content-Type': 'multipart/form-data',
+            "Content-Type": "multipart/form-data",
           },
         }
       );
@@ -117,14 +122,14 @@ const CreateChatRoom = ({ onChatRoomCreated }) => {
         const chatRoomData = response.data;
         const chatRoomId = chatRoomData.chatRoomDto.chatRoomId;
 
-        alert('채팅방이 생성되었습니다.');
+        alert("채팅방이 생성되었습니다.");
         handleCloseModal();
         onChatRoomCreated?.(chatRoomData);
         window.location.href = `/chat/${chatRoomId}`;
       }
     } catch (error) {
-      console.error('채팅방 생성 실패:', error);
-      alert('채팅방 생성에 실패했습니다. 다시 시도해주세요.');
+      console.error("채팅방 생성 실패:", error);
+      alert("채팅방 생성에 실패했습니다. 다시 시도해주세요.");
     }
   };
 
