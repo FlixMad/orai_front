@@ -138,7 +138,6 @@ const Sidebar = () => {
   const navigate = useNavigate();
   const [showAdminDashboard, setShowAdminDashboard] = useState(false);
   const { notificationCount, setNotificationCount } = useContext(UserContext);
-  const [fetchedNotificationCount, setFetchedNotificationCount] = useState(0);
 
   useEffect(() => {
     const departmentId = localStorage.getItem("departmentId");
@@ -167,58 +166,47 @@ const Sidebar = () => {
           headers: {
             Authorization: `Bearer ${token}`,
           },
-          heartbeatTimeout: 60 * 60 * 1000, // 1시간 (백엔드 설정과 동일)
-          withCredentials: true,
         };
 
-        window.sidebarEventSource = new EventSourceImpl(
+        const sse = new EventSourcePolyfill(
           `${API_BASE_URL}${ETC}/api/notifications/subscribe`,
           eventSourceInitDict
         );
 
         // 연결 성공 이벤트
-        window.sidebarEventSource.addEventListener("connect", (event) => {
+        sse.addEventListener("connect", (event) => {
           console.log("SSE Connection established:", event.data);
           fetchNotificationCount().then((count) => {
             if (count !== undefined) {
-              setFetchedNotificationCount(count);
-              if (setNotificationCount) {
-                setNotificationCount(count);
-              }
+              setNotificationCount(count);
             }
           });
         });
 
         // heartbeat 이벤트 처리
-        window.sidebarEventSource.addEventListener("heartbeat", (event) => {
+        sse.addEventListener("heartbeat", (event) => {
           console.log("Heartbeat received:", event.data);
         });
 
         // 알림 이벤트 처리
-        window.sidebarEventSource.addEventListener(
-          "notification",
-          async (event) => {
-            try {
-              console.log("Notification received:", event.data);
-              const count = await fetchNotificationCount();
-              if (count !== undefined) {
-                setFetchedNotificationCount(count);
-                if (setNotificationCount) {
-                  setNotificationCount(count);
-                }
-              }
-            } catch (error) {
-              console.error("Error handling notification:", error);
+        sse.addEventListener("notification", async (event) => {
+          try {
+            console.log("Notification received:", event.data);
+            const count = await fetchNotificationCount();
+            if (count !== undefined) {
+              setNotificationCount(count);
             }
+          } catch (error) {
+            console.error("Error handling notification:", error);
           }
-        );
+        });
 
         // 에러 처리
-        window.sidebarEventSource.onerror = (error) => {
+        sse.onerror = (error) => {
           console.error("SSE connection error:", error);
-          if (window.sidebarEventSource) {
-            window.sidebarEventSource.close();
-            window.sidebarEventSource = null;
+          if (sse) {
+            sse.close();
+            sse = null;
           }
         };
       } catch (error) {
@@ -254,7 +242,7 @@ const Sidebar = () => {
           $active={location.pathname === "/notifications"}
         >
           <img src="/images/icons/bell.png" alt="알림" />
-          알림 {fetchedNotificationCount > 0 && `(${fetchedNotificationCount})`}
+          알림 {notificationCount > 0 && `(${notificationCount})`}
           <img src="/images/icons/arrow-right.png" alt="화살표" />
         </StyledLink>
         <StyledLink

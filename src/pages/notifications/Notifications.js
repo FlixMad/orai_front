@@ -1,10 +1,13 @@
 import styled from "styled-components";
 import { API_BASE_URL, ETC } from "../../configs/host-config";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useContext } from "react";
 import axiosInstance from "../../configs/axios-config";
+import { fetchNotificationCount } from "../../utils/notificationUtils";
+import { UserContext } from "../../context/UserContext";
 
 const Notifications = () => {
   const [notifications, setNotifications] = useState([]);
+  const { setNotificationCount } = useContext(UserContext);
 
   useEffect(() => {
     const fetchNotifications = async () => {
@@ -13,13 +16,16 @@ const Notifications = () => {
           `${API_BASE_URL}${ETC}/api/notifications`
         );
         setNotifications(response.data.result);
+
+        // 알림 개수 업데이트
+        setNotificationCount(0);
       } catch (error) {
         console.error("Failed to fetch notifications", error);
       }
     };
 
     fetchNotifications();
-  }, []);
+  }, [setNotificationCount]);
 
   return (
     <Container>
