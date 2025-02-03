@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import styled from "styled-components";
 import axiosInstance from "../../configs/axios-config";
 import { API_BASE_URL, CHAT } from "../../configs/host-config";
+import SockJS from "sockjs-client";
 import AddChatMember from "./AddChatMember";
 import { Client } from "@stomp/stompjs";
 import { useRecoilValue } from "recoil";
