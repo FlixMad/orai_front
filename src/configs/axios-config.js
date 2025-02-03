@@ -25,7 +25,12 @@ Axios Interceptor는 요청 또는 응답이 처리되기 전에 실행되는 �
 // 2번째 콜백에는 과정 중 에러가 발생할 경우 실행할 로직을 작성.
 axiosInstance.interceptors.request.use(
     (config) => {
-        // 요청 보내기 전에 일괄 처리해야 할 내용을 콜백 함수로 전달.
+        if (config.url.includes('/notifications')) {
+            console.log('=== 알림 API 요청 인터셉트 ===');
+            console.log('요청 URL:', config.url);
+            console.log('요청 메서드:', config.method);
+            console.log('요청 헤더:', config.headers);
+        }
         const token = localStorage.getItem("ACCESS_TOKEN");
         if (token) {
             config.headers.Authorization = `Bearer ${token}`;
@@ -33,8 +38,8 @@ axiosInstance.interceptors.request.use(
         return config;
     },
     (error) => {
-        console.log(error);
-        Promise.reject(error);
+        console.error('알림 API 요청 실패:', error);
+        return Promise.reject(error);
     }
 );
 
