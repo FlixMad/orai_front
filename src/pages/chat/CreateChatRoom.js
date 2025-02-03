@@ -6,6 +6,9 @@ import AddChatMember from './AddChatMember';
 import { Client } from '@stomp/stompjs';
 import { useRecoilValue } from 'recoil';
 import { userState } from '../../atoms/userState';
+import { BiMessageRoundedAdd } from 'react-icons/bi';
+import { IoIosPeople } from 'react-icons/io';
+import { FaRegImage } from 'react-icons/fa6';
 
 const CreateChatRoom = ({ onChatRoomCreated }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -130,13 +133,15 @@ const CreateChatRoom = ({ onChatRoomCreated }) => {
 
   return (
     <Container>
-      <EmptyStateImage src="/images/icons/chat-plus.png" alt="새 채팅방" />
+      <EmptyStateImage>
+        <IoIosPeople size={120} color="black" />
+      </EmptyStateImage>
       <Title>새로운 채팅방 만들기</Title>
       <Description>
         새로운 채팅방을 만들어 팀원들과 대화를 시작해보세요.
       </Description>
       <CreateButton onClick={() => setIsModalOpen(true)}>
-        <img src="/images/icons/plus-circle.png" alt="생성" />
+        <BiMessageRoundedAdd size={20} color="white" />
         채팅방 만들기
       </CreateButton>
 
@@ -154,7 +159,7 @@ const CreateChatRoom = ({ onChatRoomCreated }) => {
                         alt="채팅방 이미지 미리보기"
                       />
                     ) : (
-                      <img src="/images/icons/factory.png" alt="기본 이미지" />
+                      <FaRegImage size={90} opacity={0.5} />
                     )}
                   </ImagePreview>
                   <ImageInput
@@ -203,11 +208,14 @@ const Container = styled.div`
   background: white;
 `;
 
-const EmptyStateImage = styled.img`
+const EmptyStateImage = styled.div`
   width: 120px;
   height: 120px;
   margin-bottom: 24px;
   opacity: 0.7;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 `;
 
 const Title = styled.h2`
@@ -324,10 +332,11 @@ const ImageInputWrapper = styled.div`
 const ImagePreview = styled.div`
   width: 100px;
   height: 100px;
-  border-radius: 12px;
   overflow: hidden;
   margin-bottom: 10px;
-  border: 2px solid ${({ theme }) => theme.colors.border};
+  display: flex;
+  justify-content: center;
+  align-items: center;
 
   img {
     width: 100%;
