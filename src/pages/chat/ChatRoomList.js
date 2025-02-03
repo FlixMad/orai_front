@@ -67,10 +67,8 @@ const ChatRoomList = ({ onChatRoomCreated }) => {
         client.subscribe(`/sub/${currentChatId}/chat`, (message) => {
           const messageData = JSON.parse(message.body);
 
-          // 메시지를 받았을 때 채팅방 목록 새로고침
-          if (messageData.type === 'CHAT') {
-            fetchChatRooms();
-          }
+          // 모든 메시지 타입에 대해 채팅방 목록 새로고침
+          fetchChatRooms();
         });
       }
 
@@ -202,7 +200,7 @@ const ChatRoomList = ({ onChatRoomCreated }) => {
         handleCloseModal();
         onChatRoomCreated?.(chatRoomData);
         fetchChatRooms();
-        navigate(`/chat/${chatRoomId}`);
+        navigate(`/chat/${chatRoomData.chatRoomId}`);
       }
     } catch (error) {
       console.error('채팅방 생성 실패:', error);
