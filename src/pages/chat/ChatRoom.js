@@ -251,6 +251,14 @@ const ChatRoom = () => {
       client.subscribe(`/sub/${chatRoomId}/chat`, (message) => {
         try {
           const receivedMessage = JSON.parse(message.body);
+          // 시스템 메시지이고 채팅방 수정 메시지일 경우
+          if (
+            receivedMessage.type === 'SYSTEM' &&
+            receivedMessage.content === '채팅방 정보가 수정되었습니다.'
+          ) {
+            // 채팅방 정보 새로 조회
+            fetchChatRoomInfo();
+          }
           if (receivedMessage.type === 'ERROR') return;
 
           // 메시지를 받았을 때 읽음 처리
@@ -270,6 +278,23 @@ const ChatRoom = () => {
           navigate('/chat');
         }
       });
+    };
+
+    const fetchChatRoomInfo = async () => {
+      try {
+        const response = await axiosInstance.get(
+          `${API_BASE_URL}${CHAT}/${chatRoomId}/chatRoom`
+        );
+        if (response && response.data) {
+          setChatRoomInfo({
+            ...response.data,
+            image: response.data.image,
+            name: response.data.name,
+          });
+        }
+      } catch (error) {
+        console.error('채팅방 정보를 불러오는데 실패했습니다:', error);
+      }
     };
 
     client.activate();
@@ -314,7 +339,11 @@ const ChatRoom = () => {
           `${API_BASE_URL}${CHAT}/${chatRoomId}/chatRoom`
         );
         if (response && response.data) {
-          setChatRoomInfo(response.data);
+          setChatRoomInfo({
+            ...response.data,
+            image: response.data.image, // 이미지 URL 업데이트
+            name: response.data.name, // 이름 업데이트
+          });
         }
       } catch (error) {
         console.error('채팅방 정보를 불러오는데 실패했습니다:', error);
@@ -443,7 +472,7 @@ const ChatRoom = () => {
       );
 
       if (userId === chatRoomInfo.creatorId) {
-        alert('채팅방 생성자는 내보낼 수 없습니다.');
+        alert('방장은 내보낼 수 없습니다.');
         return;
       }
 
@@ -452,7 +481,7 @@ const ChatRoom = () => {
     } catch (error) {
       console.error('사용자 내보내기 실패:', error);
       if (error.response?.status === 403) {
-        alert('채팅방 생성자만 사용자를 내보낼 수 있습니다.');
+        alert('방장만 사용자를 내보낼 수 있습니다.');
       } else {
         alert('사용자를 내보내는데 실패했습니다.');
       }
