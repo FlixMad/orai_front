@@ -71,10 +71,9 @@ const ChatRoomList = ({ onChatRoomCreated }) => {
         client.subscribe(`/sub/${currentChatId}/chat`, (message) => {
           const messageData = JSON.parse(message.body);
 
-          // 메시지를 받았을 때 채팅방 목록 새로고침
-          if (messageData.type === "CHAT") {
-            fetchChatRooms();
-          }
+          // 모든 메시지 타입에 대해 채팅방 목록 새로고침
+          fetchChatRooms();
+
         });
       }
 
@@ -200,6 +199,7 @@ const ChatRoomList = ({ onChatRoomCreated }) => {
 
       if (response.status === 200) {
         const chatRoomData = response.data;
+        const chatRoomId = chatRoomData.chatRoomDto.chatRoomId;
 
         alert("채팅방이 생성되었습니다.");
         handleCloseModal();
