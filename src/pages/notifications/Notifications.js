@@ -1,18 +1,70 @@
 import styled from "styled-components";
+import { useEffect, useState } from "react";
+import axios from "axios";
+import { API_BASE_URL, CALENDAR } from "../../configs/host-config";
+import axiosInstance from "../../configs/axios-config";
 
 const Notifications = () => {
+  const [notifications, setNotifications] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchNotifications = async () => {
+      console.log("=== 알림 데이터 요청 시작 ===");
+
+      // 오늘 날짜 가져오기 (yyyy-MM-dd 형식)
+      const today = new Date().toISOString().split("T")[0];
+
+      try {
+        const response = await axiosInstance.post(
+          `${API_BASE_URL}${CALENDAR}/api/notifications?date=${today}`
+        );
+        console.log("서버 응답 데이터:", response.data);
+
+        // 알림 데이터가 존재하면 상태 업데이트
+        setNotifications(response.data.titles || []);
+        console.log("알림 상태 업데이트 완료");
+      } catch (err) {
+        console.error("알림 데이터 요청 실패:", err);
+        setError("알림을 불러오는데 실패했습니다.");
+      } finally {
+        setLoading(false);
+      }
+
+      console.log("=== 알림 데이터 요청 종료 ===");
+    };
+
+    fetchNotifications();
+  }, []);
+
+  console.log("현재 알림 상태:", {
+    notifications,
+    loading,
+    error,
+  });
+
   return (
     <Container>
-      <NotificationList>
-        <NotificationItem>
-          <Icon src="/images/icons/vacation.png" alt="휴가" />
-          <Content>
-            <Title>휴가 신청이 승인되었습니다</Title>
-            <Message>3월 15일 휴가 신청이 승인되었습니다.</Message>
-            <Time>1시간 전</Time>
-          </Content>
-        </NotificationItem>
-      </NotificationList>
+      <h2>오늘의 알림</h2>
+      {loading && <p>알림을 불러오는 중...</p>}
+      {error && <p style={{ color: "red" }}>{error}</p>}
+      {notifications.length > 0 ? (
+        <NotificationList>
+          {notifications.map((title, index) => (
+            <NotificationItem key={index}>
+              <Icon src="/images/icons/notification.png" alt="알림" />
+              <Content>
+                <Title>{title}</Title>
+                <Message>오늘 일정이 있습니다.</Message>
+                <Time>{new Date().toLocaleTimeString()}</Time>
+              </Content>
+            </NotificationItem>
+          ))}
+        </NotificationList>
+      ) : (
+        !loading && <p>오늘 알림이 없습니다.</p>
+      )}
     </Container>
   );
 };
