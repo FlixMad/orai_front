@@ -29,9 +29,24 @@ const CalendarContainer = styled.div`
     border-color: ${({ theme }) => theme.colors.primary} !important;
   }
 
-  .fc-event {
-    background: ${({ theme }) => theme.colors.primary};
-    border-color: ${({ theme }) => theme.colors.primary};
+  // TEAM 타입 일정
+  .fc-event.schedule-type-team {
+    background: ${({ theme }) => theme.colors.secondary1};
+    border-color: ${({ theme }) => theme.colors.secondary1};
+    cursor: pointer;
+  }
+
+  // DIVISION 타입 일정
+  .fc-event.schedule-type-division {
+    background: ${({ theme }) => theme.colors.secondary2};
+    border-color: ${({ theme }) => theme.colors.secondary2};
+    cursor: pointer;
+  }
+
+  // GROUP 타입 일정
+  .fc-event.schedule-type-group {
+    background: ${({ theme }) => theme.colors.secondary3};
+    border-color: ${({ theme }) => theme.colors.secondary3};
     cursor: pointer;
   }
 
@@ -160,11 +175,34 @@ const Button = styled.button`
   }
 `;
 
+const Select = styled.select`
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: 6px;
+  font-size: 14px;
+
+  &:focus {
+    outline: none;
+    border-color: ${({ theme }) => theme.colors.primary};
+  }
+`;
+
 const Calendar = () => {
   const [events, setEvents] = useState([]); // 일정 목록
   const [selectedEvent, setSelectedEvent] = useState(null); // 선택된 일정
   const [scheduleId, setScheduleId] = useState(null); // 선택된 일정 ID
   const [showModal, setShowModal] = useState(false); // 모달 표시 여부
+  const [showCreateModal, setShowCreateModal] = useState(false); // 생성 모달 표시 여부
+  const [newEvent, setNewEvent] = useState({
+    title: "",
+    description: "",
+    start: "",
+    end: "",
+    team: "",
+    type: "TEAM",
+    scheduleStatus: "PENDING", // 기본값을 PENDING으로 설정
+  });
   const navigate = useNavigate();
 
   // 공휴일 데이터
@@ -202,6 +240,20 @@ const Calendar = () => {
     };
   });
 
+  // 일정 타입 옵션
+  const TYPE_OPTIONS = [
+    { value: "TEAM", label: "팀 일정" },
+    { value: "DIVISION", label: "부서 일정" },
+    { value: "GROUP", label: "그룹 일정" },
+  ];
+
+  // 일정 상태 옵션
+  const STATUS_OPTIONS = [
+    { value: "UPCOMING", label: "예정" },
+    { value: "IN_PROGRESS", label: "진행 중" },
+    { value: "COMPLETED", label: "완료" },
+  ];
+
   // 일정 목록 조회
   const fetchEvents = async () => {
     try {
@@ -211,16 +263,26 @@ const Calendar = () => {
           responseType: "json",
         }
       );
-      console.log("Response:", response);
+      console.log("[fetchEvents] 서버 응답:", response.data);
 
       if (response && response.data) {
-        const formattedEvents = response.data.map((event) => ({
-          id: event.scheduleId,
-          title: event.title,
-          start: event.start,
-          end: event.end,
-        }));
-        // 공휴일과 일반 일정을 합침
+        const formattedEvents = response.data.map((event) => {
+          console.log("[fetchEvents] 각 이벤트 데이터:", event);
+          return {
+            id: event.scheduleId,
+            title: event.title,
+            description: event.description,
+            start: event.start,
+            end: event.end,
+            extendedProps: {
+              description: event.description,
+              type: event.type,
+              scheduleStatus: event.scheduleStatus,
+            },
+            className: `schedule-type-${event.type.toLowerCase()} status-${event.scheduleStatus.toLowerCase()}`,
+          };
+        });
+        console.log("[fetchEvents] 변환된 이벤트 데이터:", formattedEvents);
         setEvents([...formattedEvents, ...holidayEvents]);
       } else {
         console.error("Invalid response format:", response);
@@ -229,46 +291,61 @@ const Calendar = () => {
       handleAxiosError(
         error,
         () => {
-          localStorage.clear(); // 로그아웃 시 로컬 스토리지 클리어
+          localStorage.clear();
         },
         navigate
       );
     }
   };
 
-  // 일정 추가
-  const handleDateSelect = async (selectInfo) => {
-    const title = prompt("일정을 입력하세요:");
-    if (title) {
-      try {
-        const newEvent = {
-          title,
-          start: selectInfo.startStr,
-          end: selectInfo.endStr,
-        };
+  // 일정 추가를 위한 모달 표시
+  const handleDateSelect = (selectInfo) => {
+    setNewEvent({
+      title: "",
+      description: "",
+      start: selectInfo.startStr,
+      end: selectInfo.endStr,
+    });
+    setShowCreateModal(true);
+  };
 
-        const response = await axiosInstance.post(
-          `${API_BASE_URL}${CALENDAR}/api/schedules/create-schedule`,
-          newEvent
-        );
+  // 일정 생성
+  const handleCreateEvent = async () => {
+    if (!newEvent.title) {
+      alert("제목을 입력해주세요.");
+      return;
+    }
 
-        if (response && response.data) {
-          setScheduleId(response.data.scheduleId); // 생성된 scheduleId 저장
-          setEvents([
-            ...events,
-            {
-              id: response.data.scheduleId,
-              title: response.data.title,
-              start: response.data.start,
-              end: response.data.end,
+    try {
+      const response = await axiosInstance.post(
+        `${API_BASE_URL}${CALENDAR}/api/schedules/create-schedule`,
+        newEvent
+      );
+
+      if (response && response.data) {
+        setScheduleId(response.data.scheduleId);
+        setEvents([
+          ...events,
+          {
+            id: response.data.scheduleId,
+            title: response.data.title,
+            description: response.data.description,
+            start: response.data.start,
+            end: response.data.end,
+            extendedProps: {
+              description: response.data.description,
+              type: response.data.type,
+              scheduleStatus: response.data.scheduleStatus,
             },
-          ]);
-        } else {
-          console.error("Invalid create response:", response);
-        }
-      } catch (error) {
-        handleAxiosError(error, () => {}, navigate);
+            className: `schedule-type-${response.data.type.toLowerCase()} status-${response.data.scheduleStatus.toLowerCase()}`,
+          },
+        ]);
+        setShowCreateModal(false);
+      } else {
+        console.error("Invalid create response:", response);
       }
+    } catch (error) {
+      handleAxiosError(error, () => {}, navigate);
     }
   };
 
@@ -279,13 +356,35 @@ const Calendar = () => {
       return;
     }
 
+    console.log("[handleEventClick] 클릭된 이벤트 전체 정보:", clickInfo.event);
+    console.log(
+      "[handleEventClick] extendedProps:",
+      clickInfo.event.extendedProps
+    );
+    console.log(
+      "[handleEventClick] description:",
+      clickInfo.event.extendedProps.description
+    );
+
     setSelectedEvent({
       id: clickInfo.event.id,
       title: clickInfo.event.title,
+      description: clickInfo.event.extendedProps.description || "",
+      type: clickInfo.event.extendedProps.type || "TEAM",
+      scheduleStatus: clickInfo.event.extendedProps.scheduleStatus || "PENDING",
       start: clickInfo.event.startStr.split("T")[0],
       end: clickInfo.event.endStr.split("T")[0],
     });
-    setScheduleId(clickInfo.event.id); // 선택된 일정 ID 저장
+
+    console.log("[handleEventClick] 설정된 selectedEvent:", {
+      id: clickInfo.event.id,
+      title: clickInfo.event.title,
+      description: clickInfo.event.extendedProps.description || "",
+      start: clickInfo.event.startStr.split("T")[0],
+      end: clickInfo.event.endStr.split("T")[0],
+    });
+
+    setScheduleId(clickInfo.event.id);
     setShowModal(true);
   };
 
@@ -296,16 +395,21 @@ const Calendar = () => {
     try {
       const updatedEvent = {
         title: selectedEvent.title,
-        start: selectedEvent.start, // 날짜만 전송
-        end: selectedEvent.end, // 날짜만 전송
+        description: selectedEvent.description,
+        start: selectedEvent.start,
+        end: selectedEvent.end,
+        type: selectedEvent.type,
+        scheduleStatus: selectedEvent.scheduleStatus,
       };
 
-      console.log("Updated event payload:", updatedEvent);
+      console.log("[handleEventUpdate] 업데이트 요청 데이터:", updatedEvent);
 
       const response = await axiosInstance.put(
         `${API_BASE_URL}${CALENDAR}/api/schedules/modify-schedule/${scheduleId}`,
         updatedEvent
       );
+
+      console.log("[handleEventUpdate] 서버 응답:", response.data);
 
       if (response && response.data && response.data.scheduleId) {
         setEvents(
@@ -314,8 +418,15 @@ const Calendar = () => {
               ? {
                   id: scheduleId,
                   title: response.data.title,
+                  description: response.data.description,
                   start: response.data.start,
                   end: response.data.end,
+                  extendedProps: {
+                    description: response.data.description,
+                    type: response.data.type,
+                    scheduleStatus: response.data.scheduleStatus,
+                  },
+                  className: `schedule-type-${response.data.type.toLowerCase()} status-${response.data.scheduleStatus.toLowerCase()}`,
                 }
               : event
           )
@@ -384,6 +495,98 @@ const Calendar = () => {
         dayCellDidMount={handleDayCellDidMount}
       />
 
+      {/* 일정 생성 모달 */}
+      {showCreateModal && (
+        <Modal>
+          <ModalContent>
+            <ModalHeader>
+              <h3>새 일정 추가</h3>
+              <CloseButton onClick={() => setShowCreateModal(false)}>
+                ✕
+              </CloseButton>
+            </ModalHeader>
+            <ModalBody>
+              <InputGroup>
+                <Label>제목</Label>
+                <Input
+                  type="text"
+                  value={newEvent.title}
+                  onChange={(e) =>
+                    setNewEvent({
+                      ...newEvent,
+                      title: e.target.value,
+                    })
+                  }
+                />
+              </InputGroup>
+              <InputGroup>
+                <Label>설명</Label>
+                <Input
+                  type="text"
+                  value={newEvent.description}
+                  onChange={(e) =>
+                    setNewEvent({
+                      ...newEvent,
+                      description: e.target.value,
+                    })
+                  }
+                />
+              </InputGroup>
+              <InputGroup>
+                <Label>일정 상태</Label>
+                <Select
+                  value={newEvent.scheduleStatus}
+                  onChange={(e) =>
+                    setNewEvent({
+                      ...newEvent,
+                      scheduleStatus: e.target.value,
+                    })
+                  }
+                >
+                  {STATUS_OPTIONS.map((status) => (
+                    <option key={status.value} value={status.value}>
+                      {status.label}
+                    </option>
+                  ))}
+                </Select>
+              </InputGroup>
+              <InputGroup>
+                <Label>시작 날짜</Label>
+                <Input
+                  type="date"
+                  value={newEvent.start.split("T")[0]}
+                  onChange={(e) =>
+                    setNewEvent({
+                      ...newEvent,
+                      start: e.target.value,
+                    })
+                  }
+                />
+              </InputGroup>
+              <InputGroup>
+                <Label>종료 날짜</Label>
+                <Input
+                  type="date"
+                  value={newEvent.end.split("T")[0]}
+                  onChange={(e) =>
+                    setNewEvent({
+                      ...newEvent,
+                      end: e.target.value,
+                    })
+                  }
+                />
+              </InputGroup>
+            </ModalBody>
+            <ModalFooter>
+              <Button onClick={() => setShowCreateModal(false)} $danger>
+                취소
+              </Button>
+              <Button onClick={handleCreateEvent}>추가</Button>
+            </ModalFooter>
+          </ModalContent>
+        </Modal>
+      )}
+
       {showModal && (
         <Modal>
           <ModalContent>
@@ -404,6 +607,37 @@ const Calendar = () => {
                     })
                   }
                 />
+              </InputGroup>
+              <InputGroup>
+                <Label>설명</Label>
+                <Input
+                  type="text"
+                  value={selectedEvent.description}
+                  onChange={(e) =>
+                    setSelectedEvent({
+                      ...selectedEvent,
+                      description: e.target.value,
+                    })
+                  }
+                />
+              </InputGroup>
+              <InputGroup>
+                <Label>일정 상태</Label>
+                <Select
+                  value={selectedEvent.scheduleStatus}
+                  onChange={(e) =>
+                    setSelectedEvent({
+                      ...selectedEvent,
+                      scheduleStatus: e.target.value,
+                    })
+                  }
+                >
+                  {STATUS_OPTIONS.map((status) => (
+                    <option key={status.value} value={status.value}>
+                      {status.label}
+                    </option>
+                  ))}
+                </Select>
               </InputGroup>
               <InputGroup>
                 <Label>시작 날짜</Label>

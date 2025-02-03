@@ -8,7 +8,6 @@ import { useRecoilValue } from 'recoil';
 import { userState } from '../../atoms/userState';
 import { useNavigate, useLocation } from 'react-router-dom';
 import AddChatMember from './AddChatMember';
-import { FaPlus } from 'react-icons/fa';
 import { IoMdSearch } from 'react-icons/io';
 
 const ChatRoomList = ({ onChatRoomCreated }) => {
@@ -49,7 +48,11 @@ const ChatRoomList = ({ onChatRoomCreated }) => {
     fetchChatRooms();
 
     const client = new Client({
-      webSocketFactory: () => new SockJS(`${API_BASE_URL}/stomp`),
+      webSocketFactory: () =>
+        new SockJS(`${API_BASE_URL}/stomp`, null, {
+          transports: ['websocket'],
+          secure: true,
+        }),
       connectHeaders: {
         Authorization: `Bearer ${localStorage.getItem('ACCESS_TOKEN')}`,
       },

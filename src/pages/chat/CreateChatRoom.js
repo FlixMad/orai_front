@@ -9,6 +9,7 @@ import { userState } from '../../atoms/userState';
 import { BiMessageRoundedAdd } from 'react-icons/bi';
 import { IoIosPeople } from 'react-icons/io';
 import { FaRegImage } from 'react-icons/fa6';
+import SockJS from 'sockjs-client';
 
 const CreateChatRoom = ({ onChatRoomCreated }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -21,7 +22,11 @@ const CreateChatRoom = ({ onChatRoomCreated }) => {
 
   useEffect(() => {
     const client = new Client({
-      brokerURL: `${API_BASE_URL}/stomp`,
+      webSocketFactory: () =>
+        new SockJS(`${API_BASE_URL}/stomp`, null, {
+          transports: ['websocket'],
+          secure: true,
+        }),
       connectHeaders: {
         Authorization: `Bearer ${localStorage.getItem('ACCESS_TOKEN')}`,
       },

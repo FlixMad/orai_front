@@ -17,7 +17,9 @@ const Organization = () => {
                 panzoomRef.current = Panzoom(element, {
                     maxScale: 2,
                     minScale: 0.5,
-                    startScale: 0.8,
+                    startScale: 0.9,
+                    startX: 170,
+                    startY: 0,
                 });
 
                 // 휠 이벤트 처리
