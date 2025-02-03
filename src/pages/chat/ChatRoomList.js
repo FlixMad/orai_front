@@ -47,7 +47,11 @@ const ChatRoomList = ({ onChatRoomCreated }) => {
     fetchChatRooms();
 
     const client = new Client({
-      webSocketFactory: () => new SockJS(`${API_BASE_URL}/stomp`),
+      webSocketFactory: () =>
+        new SockJS(`${API_BASE_URL}/stomp`, null, {
+          transports: ['websocket'],
+          secure: true,
+        }),
       connectHeaders: {
         Authorization: `Bearer ${localStorage.getItem('ACCESS_TOKEN')}`,
       },
@@ -66,7 +70,6 @@ const ChatRoomList = ({ onChatRoomCreated }) => {
       if (currentChatId) {
         client.subscribe(`/sub/${currentChatId}/chat`, (message) => {
           const messageData = JSON.parse(message.body);
-
           // 모든 메시지 타입에 대해 채팅방 목록 새로고침
           fetchChatRooms();
         });
