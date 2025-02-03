@@ -8,6 +8,7 @@ import { useRecoilValue } from 'recoil';
 import { userState } from '../../atoms/userState';
 import { useNavigate, useLocation } from 'react-router-dom';
 import AddChatMember from './AddChatMember';
+import { IoMdSearch } from 'react-icons/io';
 
 const ChatRoomList = ({ onChatRoomCreated }) => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -321,12 +322,11 @@ const ChatRoomList = ({ onChatRoomCreated }) => {
         <HeaderTitleWrapper>
           <HeaderTitle>채팅방 목록</HeaderTitle>
           <NewChatButton onClick={() => setIsModalOpen(true)}>
-            <img src="/images/icons/plus-circle.png" alt="새 채팅방" />
             새채팅방
           </NewChatButton>
         </HeaderTitleWrapper>
         <SearchBar>
-          <img src="/images/icons/search.png" alt="검색" />
+          <IoMdSearch size={20} opacity={0.5} />
           <input
             type="text"
             placeholder="채팅방 검색"
@@ -654,7 +654,7 @@ const NewChatButton = styled.button`
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 3px;
+  padding: 3px 6px;
   border-radius: 5px;
   background: ${({ theme }) => theme.colors.primary};
   color: white;
