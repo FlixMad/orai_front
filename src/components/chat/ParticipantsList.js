@@ -138,6 +138,10 @@ const ParticipantsList = ({
   onClose,
 }) => {
   const handleRemoveUser = async (userId) => {
+    if (!window.confirm('정말 이 멤버를 채팅방에서 내보내시겠습니까?')) {
+      return;
+    }
+
     try {
       const response = await fetch(
         `${API_BASE_URL}${CHAT}/${chatRoomId}/${userId}/deleteUser`
