@@ -1,13 +1,13 @@
-import React, { useEffect, useState, useCallback, useRef } from "react";
-import { Client } from "@stomp/stompjs";
-import SockJS from "sockjs-client";
-import axiosInstance from "../../configs/axios-config";
-import { API_BASE_URL, CHAT } from "../../configs/host-config";
-import styled from "styled-components";
-import ParticipantsList from "../../components/chat/ParticipantsList";
-import MessageList from "../../components/chat/MessageList";
-import { useParams, useNavigate } from "react-router-dom";
-import AddChatMember from "./AddChatMember";
+import React, { useEffect, useState, useCallback, useRef } from 'react';
+import { Client } from '@stomp/stompjs';
+import SockJS from 'sockjs-client';
+import axiosInstance from '../../configs/axios-config';
+import { API_BASE_URL, CHAT } from '../../configs/host-config';
+import styled from 'styled-components';
+import ParticipantsList from '../../components/chat/ParticipantsList';
+import MessageList from '../../components/chat/MessageList';
+import { useParams, useNavigate } from 'react-router-dom';
+import AddChatMember from './AddChatMember';
 
 const ChatRoomContainer = styled.div`
   display: flex;
@@ -118,10 +118,10 @@ const ButtonGroup = styled.div`
 `;
 
 const ExitButton = styled(InviteButton)`
-  background: ${({ theme }) => theme.colors.danger || "#dc3545"};
+  background: ${({ theme }) => theme.colors.danger || '#dc3545'};
 
   &:hover {
-    background: ${({ theme }) => theme.colors.dangerDark || "#bd2130"};
+    background: ${({ theme }) => theme.colors.dangerDark || '#bd2130'};
   }
 `;
 
@@ -160,18 +160,18 @@ const ChatRoom = () => {
   const { chatRoomId } = useParams();
   const [messages, setMessages] = useState([]);
   const [participants, setParticipants] = useState([]);
-  const [messageContent, setMessageContent] = useState("");
+  const [messageContent, setMessageContent] = useState('');
   const [stompClient, setStompClient] = useState(null);
   const [showParticipants, setShowParticipants] = useState(false);
-  const [chatRoomInfo, setChatRoomInfo] = useState({ name: "", imageUrl: "" });
+  const [chatRoomInfo, setChatRoomInfo] = useState({ name: '', imageUrl: '' });
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [selectedUsers, setSelectedUsers] = useState([]);
   const navigate = useNavigate();
-  const [currentUserId] = useState(localStorage.getItem("userId"));
+  const [currentUserId] = useState(localStorage.getItem('userId'));
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    console.log("현재 채팅방 ID:", chatRoomId);
+    console.log('현재 채팅방 ID:', chatRoomId);
   }, [chatRoomId]);
 
   useEffect(() => {
@@ -185,8 +185,8 @@ const ChatRoom = () => {
         prevMessages.some((msg) => msg.messageId === receivedMessage.messageId)
       ) {
         if (
-          receivedMessage.type === "EDIT" ||
-          receivedMessage.type === "DELETE"
+          receivedMessage.type === 'EDIT' ||
+          receivedMessage.type === 'DELETE'
         ) {
           return prevMessages.map((msg) =>
             msg.messageId === receivedMessage.messageId
@@ -200,7 +200,7 @@ const ChatRoom = () => {
         return prevMessages;
       }
 
-      if (receivedMessage.type === "ERROR") {
+      if (receivedMessage.type === 'ERROR') {
         return prevMessages;
       }
 
@@ -226,7 +226,7 @@ const ChatRoom = () => {
         setMessages(response.data);
       }
     } catch (error) {
-      console.error("초기 메시지 로드 실패:", error);
+      console.error('초기 메시지 로드 실패:', error);
     } finally {
       setIsLoading(false);
     }
@@ -236,11 +236,11 @@ const ChatRoom = () => {
     const client = new Client({
       webSocketFactory: () =>
         new SockJS(`${API_BASE_URL}/stomp`, null, {
-          transports: ["websocket"],
+          transports: ['websocket'],
           secure: true,
         }),
       connectHeaders: {
-        Authorization: `Bearer ${localStorage.getItem("ACCESS_TOKEN")}`,
+        Authorization: `Bearer ${localStorage.getItem('ACCESS_TOKEN')}`,
       },
       debug: function (str) {
         console.log(str);
@@ -272,14 +272,14 @@ const ChatRoom = () => {
 
           handleNewMessage(receivedMessage);
         } catch (error) {
-          console.error("메시지 처리 실패:", error);
+          console.error('메시지 처리 실패:', error);
         }
       });
 
       client.subscribe(`/queue/queue`, (notification) => {
         const data = JSON.parse(notification.body);
         if (data.chatRoomId === chatRoomId) {
-          navigate("/chat");
+          navigate('/chat');
         }
       });
     };
@@ -322,7 +322,7 @@ const ChatRoom = () => {
           );
         }
       } catch (error) {
-        console.error("초기 데이터 로드 실패:", error);
+        console.error('초기 데이터 로드 실패:', error);
       }
     };
 
@@ -350,7 +350,7 @@ const ChatRoom = () => {
           });
         }
       } catch (error) {
-        console.error("채팅방 정보를 불러오는데 실패했습니다:", error);
+        console.error('채팅방 정보를 불러오는데 실패했습니다:', error);
       }
     };
 
@@ -366,14 +366,14 @@ const ChatRoom = () => {
         setParticipants(response.data);
       }
     } catch (error) {
-      console.error("참가자 목록을 불러오는데 실패했습니다:", error);
+      console.error('참가자 목록을 불러오는데 실패했습니다:', error);
     }
   };
 
   const formatDate = (date) => {
-    return new Date(date).toLocaleTimeString("ko-KR", {
-      hour: "2-digit",
-      minute: "2-digit",
+    return new Date(date).toLocaleTimeString('ko-KR', {
+      hour: '2-digit',
+      minute: '2-digit',
     });
   };
 
@@ -382,8 +382,8 @@ const ChatRoom = () => {
 
     try {
       if (stompClient && stompClient.connected) {
-        const userId = localStorage.getItem("userId");
-        const userName = localStorage.getItem("userName");
+        const userId = localStorage.getItem('userId');
+        const userName = localStorage.getItem('userName');
 
         stompClient.publish({
           destination: `/pub/${chatRoomId}/send`,
@@ -394,16 +394,16 @@ const ChatRoom = () => {
           body: messageContent,
         });
 
-        setMessageContent("");
+        setMessageContent('');
       }
     } catch (error) {
-      console.error("메시지 전송 실패:", error);
-      alert("메시지 전송에 실패했습니다.");
+      console.error('메시지 전송 실패:', error);
+      alert('메시지 전송에 실패했습니다.');
     }
   }, [messageContent, stompClient, chatRoomId]);
 
   const handleKeyPress = (e) => {
-    if (e.key === "Enter") {
+    if (e.key === 'Enter') {
       handleSendMessage();
     }
   };
@@ -415,54 +415,54 @@ const ChatRoom = () => {
   const handleInvite = async (selectedUserIds) => {
     try {
       if (selectedUserIds.length === 0) {
-        alert("초대할 멤버를 선택해주세요.");
+        alert('초대할 멤버를 선택해주세요.');
         return;
       }
 
       const formData = new FormData();
-      formData.append("inviteeIds", selectedUserIds);
+      formData.append('inviteeIds', selectedUserIds);
 
       const response = await axiosInstance.post(
         `${API_BASE_URL}${CHAT}/${chatRoomId}/invite`,
         formData,
         {
           headers: {
-            "Content-Type": "multipart/form-data",
+            'Content-Type': 'multipart/form-data',
           },
         }
       );
 
       if (response.status === 200) {
-        alert("멤버 초대가 완료되었습니다.");
+        alert('멤버 초대가 완료되었습니다.');
         setShowInviteModal(false);
         setSelectedUsers([]);
         fetchParticipants(); // 참가자 목록 새로고침
       }
     } catch (error) {
-      console.error("멤버 초대 중 오류 발생:", error);
-      alert("멤버 초대에 실패했습니다.");
+      console.error('멤버 초대 중 오류 발생:', error);
+      alert('멤버 초대에 실패했습니다.');
     }
   };
 
   const handleExitChatRoom = async () => {
-    if (window.confirm("정말로 채팅방을 나가시겠습니까?")) {
+    if (window.confirm('정말로 채팅방을 나가시겠습니까?')) {
       try {
         const response = await axiosInstance.delete(
           `${API_BASE_URL}${CHAT}/${chatRoomId}/disconnect`
         );
 
         if (response.status === 204) {
-          alert("채팅방을 나갔습니다.");
-          navigate("/chat"); // 채팅방 목록으로 이동
+          alert('채팅방을 나갔습니다.');
+          navigate('/chat'); // 채팅방 목록으로 이동
         }
       } catch (error) {
-        console.error("채팅방 나가기 실패:", error);
+        console.error('채팅방 나가기 실패:', error);
         if (error?.response?.status === 500) {
-          alert("방장은 채팅방을 나갈 수 없습니다.");
+          alert('방장은 채팅방을 나갈 수 없습니다.');
         } else if (error?.response?.status === 404) {
-          alert("존재하지 않는 채팅방입니다.");
+          alert('존재하지 않는 채팅방입니다.');
         } else {
-          alert("방장은 채팅방을 나갈 수 없습니다.");
+          alert('방장은 채팅방을 나갈 수 없습니다.');
           navigate(`/chat/${chatRoomId}`);
         }
       }
@@ -483,11 +483,11 @@ const ChatRoom = () => {
       // 참가자 목록 새로고침
       fetchParticipants();
     } catch (error) {
-      console.error("사용자 내보내기 실패:", error);
+      console.error('사용자 내보내기 실패:', error);
       if (error.response?.status === 403) {
         alert('방장만 사용자를 내보낼 수 있습니다.');
       } else {
-        alert("사용자를 내보내는데 실패했습니다.");
+        alert('사용자를 내보내는데 실패했습니다.');
       }
     }
   };
@@ -500,7 +500,7 @@ const ChatRoom = () => {
         { messageId }
       );
     } catch (error) {
-      console.error("메시지 읽음 처리 실패:", error);
+      console.error('메시지 읽음 처리 실패:', error);
     }
   };
 
@@ -513,8 +513,8 @@ const ChatRoom = () => {
       }
     };
 
-    window.addEventListener("focus", handleFocus);
-    return () => window.removeEventListener("focus", handleFocus);
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
   }, [messages, chatRoomId]);
 
   return (
@@ -523,7 +523,7 @@ const ChatRoom = () => {
         <ChatRoomInfo>
           <ChatRoomInfoLeft>
             <ChatRoomImage
-              src={chatRoomInfo.image || "/default-chat-room.png"}
+              src={chatRoomInfo.image || '/default-chat-room.png'}
               alt={chatRoomInfo.name}
             />
             <ChatRoomName>{chatRoomInfo.name}</ChatRoomName>
