@@ -164,6 +164,22 @@ const MessageList = ({ messages, setMessages, formatDate, chatRoomId }) => {
   }, [messages]);
 
   useEffect(() => {
+    // 컴포넌트가 마운트될 때(채팅방 입장 시) 마지막 메시지 읽음 처리
+    if (messages.length > 0) {
+      const lastMessage = messages[messages.length - 1];
+      if (lastMessage.messageId) {
+        axiosInstance
+          .post(`${API_BASE_URL}${CHAT}/rooms/${chatRoomId}/read`, {
+            messageId: lastMessage.messageId,
+          })
+          .catch((error) => {
+            console.error('메시지 읽음 처리 실패:', error);
+          });
+      }
+    }
+  }, [chatRoomId]); // chatRoomId가 변경될 때만 실행
+
+  useEffect(() => {
     // 메시지 목록이 업데이트될 때마다 마지막 메시지 읽음 처리
     if (messages.length > 0 && document.hasFocus()) {
       const lastMessage = messages[messages.length - 1];
