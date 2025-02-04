@@ -4,7 +4,7 @@ import React, { useEffect, useState, createContext } from "react";
 
 export const UserContext = createContext();
 
-export const AuthContextProvider = (props) => {
+export const AuthContextProvider = ({ children }) => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isInit, setIsInit] = useState(false); // 초기화 완료 상태 추가
   const [name, setName] = useState("새로운 방문자님");
@@ -49,7 +49,7 @@ export const AuthContextProvider = (props) => {
     <UserContext.Provider
       value={{ notificationCount, setNotificationCount, loginHandler }}
     >
-      {props.children}
+      {children}
     </UserContext.Provider>
   );
 };
