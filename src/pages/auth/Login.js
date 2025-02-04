@@ -46,7 +46,7 @@ const Login = () => {
 
         // QR 코드 생성 (URI를 직접 QR 코드 생성에 사용)
       } else {
-        navigate("/dashboard"); // MFA 필요 없으면 바로 대시보드로 이동
+        navigate("/"); // MFA 필요 없으면 바로 대시보드로 이동
       }
     } catch (error) {
       console.error("로그인 실패:", error);
@@ -73,9 +73,10 @@ const Login = () => {
 
       console.log("MFA 인증 성공:", response.data);
       localStorage.setItem("ACCESS_TOKEN", response.data.result.accessToken); // JWT 토큰 저장
-      navigate("/dashboard"); // 대시보드로 이동
+      navigate("/"); // 대시보드로 이동
     } catch (error) {
       console.error("MFA 인증 실패:", error);
+
       setErrorMessage("MFA 코드가 잘못되었습니다.");
     }
   };

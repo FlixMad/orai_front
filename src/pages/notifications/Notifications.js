@@ -29,18 +29,25 @@ const Notifications = () => {
 
   return (
     <Container>
-      <NotificationList>
-        {notifications.map((notification, index) => (
-          <NotificationItem key={index}>
-            <Icon src={notification.icon} alt={notification.title} />
-            <Content>
-              <Title>{notification.title}</Title>
-              <Message>{notification.message}</Message>
-              <Time>{notification.time}</Time>
-            </Content>
-          </NotificationItem>
-        ))}
-      </NotificationList>
+      {notifications.length === 0 ? (
+        <EmptyState>
+          <EmptyIcon>🔔</EmptyIcon>
+          <EmptyText>새로운 알림이 없습니다.</EmptyText>
+        </EmptyState>
+      ) : (
+        <NotificationList>
+          {notifications.map((notification, index) => (
+            <NotificationItem key={index}>
+              <Icon src={notification.icon} alt={notification.title} />
+              <Content>
+                <Title>{notification.title}</Title>
+                <Message>{notification.message}</Message>
+                <Time>{notification.time}</Time>
+              </Content>
+            </NotificationItem>
+          ))}
+        </NotificationList>
+      )}
     </Container>
   );
 };
@@ -91,6 +98,25 @@ const Message = styled.div`
 
 const Time = styled.div`
   font-size: 12px;
+  color: ${({ theme }) => theme.colors.text2};
+`;
+
+const EmptyState = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  min-height: 300px;
+`;
+
+const EmptyIcon = styled.div`
+  font-size: 48px;
+  margin-bottom: 16px;
+`;
+
+const EmptyText = styled.div`
+  font-size: 16px;
   color: ${({ theme }) => theme.colors.text2};
 `;
 

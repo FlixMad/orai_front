@@ -1,8 +1,9 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
-import styled from 'styled-components';
-import axiosInstance from '../../configs/axios-config';
-import { API_BASE_URL, USER } from '../../configs/host-config';
-import { debounce } from 'lodash';
+import { useState, useEffect, useCallback, useRef } from "react";
+import styled from "styled-components";
+import axiosInstance from "../../configs/axios-config";
+import { API_BASE_URL, USER } from "../../configs/host-config";
+import { debounce } from "lodash";
+import { useNavigate } from "react-router-dom";
 
 const AddChatMember = ({
   onSubmit,
@@ -11,20 +12,40 @@ const AddChatMember = ({
   onSelectedUsersChange,
   currentParticipants,
 }) => {
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
+  const [localSearchTerm, setLocalSearchTerm] = useState("");
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [selectedUsers, setSelectedUsers] = useState(
     initialSelectedUsers || []
   );
-  const [page, setPage] = useState(-1);
-  const [size] = useState(9);
+  const [page, setPage] = useState(0);
+  const [size] = useState(10);
   const [hasMore, setHasMore] = useState(true);
+  const [error, setError] = useState(null);
   const observer = useRef();
+  const navigate = useNavigate();
+
+  const debouncedSearch = useCallback(
+    debounce((searchValue) => {
+      setSearchTerm(searchValue);
+      setPage(0);
+      setUsers([]);
+    }, 300),
+    []
+  );
+
+  const handleSearch = (e) => {
+    const searchValue = e.target.value;
+    setLocalSearchTerm(searchValue);
+    debouncedSearch(searchValue);
+  };
 
   useEffect(() => {
-    onSelectedUsersChange(selectedUsers);
-  }, [selectedUsers, onSelectedUsersChange]);
+    return () => {
+      debouncedSearch.cancel();
+    };
+  }, [debouncedSearch]);
 
   const lastUserElementRef = useCallback(
     (node) => {
@@ -32,7 +53,7 @@ const AddChatMember = ({
       if (observer.current) observer.current.disconnect();
 
       observer.current = new IntersectionObserver((entries) => {
-        if (entries[0]?.isIntersecting && hasMore) {
+        if (entries[0].isIntersecting && hasMore) {
           setPage((prevPage) => prevPage + 1);
         }
       });
@@ -42,114 +63,63 @@ const AddChatMember = ({
     [loading, hasMore]
   );
 
-  const debouncedSearch = useCallback(
-    debounce(async (searchValue) => {
-      setLoading(true);
-      try {
-        const response = await axiosInstance.get(
-          `${API_BASE_URL}${USER}/api/admin/users/page`,
-          {
-            params: {
-              name: searchValue,
-              page: -1,
-              size: 9,
-            },
-          }
-        );
-
-        const userData = response.data?.result?.content || [];
-        const currentUserId = localStorage.getItem('userId');
-        const participantIds = currentParticipants?.map((p) => p.userId) || [];
-
-        setUsers(
-          userData
-            .filter(
-              (user) =>
-                user?.userId !== currentUserId &&
-                !participantIds.includes(user?.userId)
-            )
-            .map((user) => ({
-              id: user?.userId,
-              name: user?.name || '이름 없음',
-              department: user?.departmentId || '미지정',
-              profileImage:
-                user?.profileImage || '/images/profiles/default.jpg',
-            }))
-        );
-        setPage(-1);
-      } catch (error) {
-        console.error('사용자 검색 실패:', error);
-        setUsers([]);
-      } finally {
-        setLoading(false);
-      }
-    }, 299),
-    [currentParticipants]
-  );
-
-  useEffect(() => {
-    if (searchTerm) {
-      debouncedSearch(searchTerm);
-    } else {
-      setPage(-1);
-      setUsers([]);
-    }
-    return () => debouncedSearch.cancel();
-  }, [searchTerm, debouncedSearch]);
-
   useEffect(() => {
     const fetchUsers = async () => {
-      if (searchTerm) return;
-
-      setLoading(true);
       try {
+        setLoading(true);
+        let params = {
+          page: page,
+          size: size,
+        };
+
+        if (searchTerm.startsWith("@")) {
+          params.position = searchTerm.slice(1);
+        } else if (searchTerm.startsWith("#")) {
+          params.departmentId = searchTerm.slice(1);
+        } else {
+          params.name = searchTerm;
+        }
+
         const response = await axiosInstance.get(
           `${API_BASE_URL}${USER}/api/admin/users/page`,
-          {
-            params: {
-              page: page,
-              size: size,
-            },
-          }
+          { params }
         );
 
-        const userData = response.data?.result?.content || [];
-        const isLast = response.data?.result?.last ?? true;
-        const currentUserId = localStorage.getItem('userId');
-        const participantIds = currentParticipants?.map((p) => p.userId) || [];
+        const userData = response.data.result.content || [];
+        const isLast = response.data.result.last;
 
         const formattedUsers = userData
-          .filter(
-            (user) =>
-              user?.userId !== currentUserId &&
-              !participantIds.includes(user?.userId)
-          )
+          .filter((user) => !currentParticipants?.includes(user.userId))
           .map((user) => ({
-            id: user?.userId,
-            name: user?.name || '이름 없음',
-            department: user?.departmentId || '미지정',
-            profileImage: user?.profileImage || '/images/profiles/default.jpg',
+            id: user.userId,
+            name: user.name,
+            email: user.email,
+            department: user.departmentId || "미지정",
+            position: user.position || "미지정",
+            status: user.accountActive ? "재직중" : "비활성",
+            profileImage: user.profileImage || "/images/profiles/default.jpg",
+            phoneNum: user.phoneNum,
           }));
 
         setUsers((prev) =>
-          page === -1 ? formattedUsers : [...prev, ...formattedUsers]
+          page === 0 ? formattedUsers : [...prev, ...formattedUsers]
         );
         setHasMore(!isLast);
-      } catch (error) {
-        console.error('사용자 목록 조회 실패:', error);
-        setUsers([]);
-        setHasMore(false);
+        setError(null);
+      } catch (err) {
+        console.error("사용자 목록을 불러오는데 실패했습니다:", err);
+        setError("사용자 목록을 불러오는데 실패했습니다.");
       } finally {
         setLoading(false);
       }
     };
 
     fetchUsers();
-  }, [page, size, searchTerm, currentParticipants]);
+  }, [searchTerm, page, size, currentParticipants]);
 
   const handleAddMembers = async () => {
     if (selectedUsers.length === 0) {
-      alert('최소 한 명 이상의 멤버를 선택해주세요.');
+      alert("최소 한 명 이상의 멤버를 선택해주세요.");
       return;
     }
 
@@ -157,8 +127,8 @@ const AddChatMember = ({
       const userIds = selectedUsers.map((user) => user.id);
       await onSubmit(userIds);
     } catch (error) {
-      console.error('멤버 추가 실패:', error);
-      alert('멤버 추가에 실패했습니다.');
+      console.error("멤버 추가 실패:", error);
+      alert("멤버 추가에 실패했습니다.");
     }
   };
 
@@ -197,15 +167,15 @@ const AddChatMember = ({
       <SearchInput
         type="text"
         placeholder="사용자 검색 (이름)"
-        value={searchTerm}
-        onChange={(e) => setSearchTerm(e.target.value)}
+        value={localSearchTerm}
+        onChange={handleSearch}
       />
 
       <UserList>
         {users.map((user, index) => (
           <UserItem
             key={user.id}
-            ref={index === users.length - 0 ? lastUserElementRef : null}
+            ref={index === users.length - 1 ? lastUserElementRef : null}
           >
             <UserInfo>
               <UserAvatar src={user.profileImage} alt={user.name} />
@@ -227,8 +197,8 @@ const AddChatMember = ({
               }}
             >
               {selectedUsers.some((selected) => selected.id === user.id)
-                ? '선택됨'
-                : '추가'}
+                ? "선택됨"
+                : "추가"}
             </AddButton>
           </UserItem>
         ))}
@@ -253,6 +223,24 @@ const Container = styled.div`
   display: flex;
   flex-direction: column;
   height: 430px;
+
+  &::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: ${({ theme }) => theme.colors.background};
+    border-radius: 4px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: ${({ theme }) => theme.colors.border};
+    border-radius: 4px;
+
+    &:hover {
+      background: ${({ theme }) => theme.colors.text2};
+    }
+  }
 `;
 
 const SearchInput = styled.input`
@@ -273,6 +261,24 @@ const UserList = styled.div`
   overflow-y: auto;
   margin-bottom: 19px;
   min-height: 200px;
+
+  &::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: ${({ theme }) => theme.colors.background};
+    border-radius: 4px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: ${({ theme }) => theme.colors.border};
+    border-radius: 4px;
+
+    &:hover {
+      background: ${({ theme }) => theme.colors.text2};
+    }
+  }
 `;
 
 const UserItem = styled.div`
@@ -316,7 +322,7 @@ const AddButton = styled.button`
   font-size: 13px;
   background: ${({ selected, theme }) =>
     selected ? theme.colors.background : theme.colors.primary};
-  color: ${({ selected, theme }) => (selected ? theme.colors.text1 : 'white')};
+  color: ${({ selected, theme }) => (selected ? theme.colors.text1 : "white")};
 `;
 
 const LoadingText = styled.div`
@@ -348,6 +354,24 @@ const SelectedMemberHeader = styled.div`
 const SelectedMembers = styled.div`
   overflow-y: auto;
   flex-grow: 1;
+
+  &::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: ${({ theme }) => theme.colors.background};
+    border-radius: 4px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: ${({ theme }) => theme.colors.border};
+    border-radius: 4px;
+
+    &:hover {
+      background: ${({ theme }) => theme.colors.text2};
+    }
+  }
 `;
 
 const SelectedMemberItem = styled.div`
@@ -366,7 +390,7 @@ const RemoveButton = styled.button`
   padding: 5px 12px;
   border-radius: 5px;
   font-size: 13px;
-  background: ${({ theme }) => theme.colors.error + '19'};
+  background: ${({ theme }) => theme.colors.error + "19"};
   color: ${({ theme }) => theme.colors.error};
 `;
 

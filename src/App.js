@@ -9,13 +9,28 @@ import theme from "./styles/theme";
 import GlobalStyle from "./styles/GlobalStyle";
 import DevLogin from "./pages/auth/DevLogin";
 import { AuthContextProvider } from "./context/UserContext";
+import axiosInstance from "./configs/axios-config";
+import { API_BASE_URL, USER } from "./configs/host-config";
 
 const PrivateRoute = ({ children }) => {
   const location = useLocation();
   const token = localStorage.getItem("ACCESS_TOKEN");
+  const verifyToken = async () => {
+    try {
+      const response = await axiosInstance.get(
+        `${API_BASE_URL}${USER}/api/users/me`
+      );
+      if (response.status === 200) {
+        return true;
+      }
+    } catch (error) {
+      console.error("토큰 검증 실패:", error);
+      return false;
+    }
+  };
 
   if (
-    !token &&
+    !verifyToken() &&
     location.pathname !== "/login" &&
     location.pathname !== "/devLogin"
   ) {
