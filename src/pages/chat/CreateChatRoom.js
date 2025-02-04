@@ -1,58 +1,152 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import axiosInstance from '../../configs/axios-config';
 import { API_BASE_URL, CHAT } from '../../configs/host-config';
+import AddChatMember from './AddChatMember';
+import { Client } from '@stomp/stompjs';
+import { useRecoilValue } from 'recoil';
+import { userState } from '../../atoms/userState';
+import { BiMessageRoundedAdd } from 'react-icons/bi';
+import { IoIosPeople } from 'react-icons/io';
+import { FaRegImage } from 'react-icons/fa6';
+import SockJS from 'sockjs-client';
 
 const CreateChatRoom = ({ onChatRoomCreated }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [currentStep, setCurrentStep] = useState(1); // 1: 기본 정보, 2: 멤버 선택
   const [name, setName] = useState('');
+  const [image, setImage] = useState('');
+  const [selectedUsers, setSelectedUsers] = useState([]);
+  const [stompClient, setStompClient] = useState(null);
+  const currentUser = useRecoilValue(userState);
+
+  useEffect(() => {
+    const client = new Client({
+      webSocketFactory: () =>
+        new SockJS(`${API_BASE_URL}/stomp`, null, {
+          transports: ['websocket'],
+          secure: true,
+        }),
+      connectHeaders: {
+        Authorization: `Bearer ${localStorage.getItem('ACCESS_TOKEN')}`,
+      },
+      debug: function (str) {
+        console.log(str);
+      },
+      reconnectDelay: 5000,
+      heartbeatIncoming: 4000,
+      heartbeatOutgoing: 4000,
+    });
+
+    client.onConnect = () => {
+      setStompClient(client);
+    };
+
+    client.activate();
+
+    return () => {
+      if (client) {
+        client.deactivate();
+      }
+    };
+  }, [currentUser.id]);
 
   const handleCloseModal = () => {
     setIsModalOpen(false);
-    setName(''); // 입력창 초기화
+    setName('');
+    setImage(null);
+    setCurrentStep(1);
+    setSelectedUsers([]);
   };
 
-  const handleCreateRoom = async () => {
+  const handleNext = () => {
+    if (!name.trim() && !image) {
+      alert('채팅방 이름과 이미지를 입력해주세요.');
+      return;
+    }
+
+    if (!name.trim()) {
+      alert('채팅방 이름을 입력해주세요.');
+      return;
+    }
+    if (!image) {
+      alert('채팅방 이미지를 선택해주세요.');
+      return;
+    }
+    setCurrentStep(2);
+  };
+
+  const handleBack = () => {
+    setCurrentStep(1);
+  };
+
+  const handleSelectedUsers = (users) => {
+    setSelectedUsers(users);
+  };
+
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        // 5MB 제한
+        alert('파일 크기는 5MB 이하여야 합니다.');
+        return;
+      }
+      setImage(file);
+    }
+  };
+
+  const handleCreateRoom = async (selectedUserIds) => {
     try {
-      // 채팅방 이름이 비어있는지 확인
       if (!name.trim()) {
         setName('');
         alert('채팅방 이름을 입력해주세요.');
-        document.querySelector('input').focus();
         return;
       }
 
+      const formData = new FormData();
+      formData.append('name', name);
+      if (image) {
+        formData.append('image', image);
+      }
+      formData.append('userIds', selectedUserIds);
+
       const response = await axiosInstance.post(
         `${API_BASE_URL}${CHAT}/createChatRoom`,
-        name
+        formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        }
       );
 
       if (response.status === 200) {
-        const { result } = response.data;
-        setName('');
+        const chatRoomData = response.data;
+        const chatRoomId = chatRoomData.chatRoomDto.chatRoomId;
+
         alert('채팅방이 생성되었습니다.');
-        setIsModalOpen(false);
-        console.log('생성된 채팅방 정보:', result);
-        window.location.reload(); // 페이지 새로고침
-        // TODO: 필요한 경우 채팅방 목록을 새로고침하거나 새로 생성된 채팅방으로 이동
+        handleCloseModal();
+        onChatRoomCreated?.(chatRoomData);
+        window.location.href = `/chat/${chatRoomId}`;
       }
     } catch (error) {
       console.error('채팅방 생성 실패:', error);
-      setName('');
       alert('채팅방 생성에 실패했습니다. 다시 시도해주세요.');
-      document.querySelector('input').focus();
     }
   };
 
   return (
     <Container>
-      <EmptyStateImage src="/images/icons/chat-plus.png" alt="새 채팅방" />
+      <EmptyStateImage>
+        <IoIosPeople size={120} color="black" />
+      </EmptyStateImage>
       <Title>새로운 채팅방 만들기</Title>
       <Description>
         새로운 채팅방을 만들어 팀원들과 대화를 시작해보세요.
       </Description>
       <CreateButton onClick={() => setIsModalOpen(true)}>
-        <img src="/images/icons/plus-circle.png" alt="생성" />
+        <BiMessageRoundedAdd size={20} color="white" />
         채팅방 만들기
       </CreateButton>
 
@@ -60,16 +154,48 @@ const CreateChatRoom = ({ onChatRoomCreated }) => {
         <Modal>
           <ModalContent>
             <ModalTitle>새 채팅방 만들기</ModalTitle>
-            <Input
-              type="text"
-              placeholder="채팅방 이름을 입력하세요"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-            />
-            <ButtonGroup>
-              <CancelButton onClick={handleCloseModal}>취소</CancelButton>
-              <ConfirmButton onClick={handleCreateRoom}>생성</ConfirmButton>
-            </ButtonGroup>
+            {currentStep === 1 ? (
+              <>
+                <ImageInputWrapper>
+                  <ImagePreview>
+                    {image ? (
+                      <img
+                        src={URL.createObjectURL(image)}
+                        alt="채팅방 이미지 미리보기"
+                      />
+                    ) : (
+                      <FaRegImage size={90} opacity={0.5} />
+                    )}
+                  </ImagePreview>
+                  <ImageInput
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageChange}
+                    id="createRoomImage"
+                  />
+                  <ImageLabel htmlFor="createRoomImage">이미지 선택</ImageLabel>
+                </ImageInputWrapper>
+                <Input
+                  type="text"
+                  placeholder="채팅방 이름을 입력하세요"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                />
+                <ButtonGroup>
+                  <CancelButton onClick={handleCloseModal}>취소</CancelButton>
+                  <ConfirmButton onClick={handleNext}>다음</ConfirmButton>
+                </ButtonGroup>
+              </>
+            ) : (
+              <>
+                <AddChatMember
+                  onSubmit={handleCreateRoom}
+                  onBack={handleBack}
+                  selectedUsers={selectedUsers}
+                  onSelectedUsersChange={handleSelectedUsers}
+                />
+              </>
+            )}
           </ModalContent>
         </Modal>
       )}
@@ -87,11 +213,14 @@ const Container = styled.div`
   background: white;
 `;
 
-const EmptyStateImage = styled.img`
+const EmptyStateImage = styled.div`
   width: 120px;
   height: 120px;
   margin-bottom: 24px;
   opacity: 0.7;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 `;
 
 const Title = styled.h2`
@@ -153,7 +282,7 @@ const ModalContent = styled.div`
 const ModalTitle = styled.h3`
   font-size: 20px;
   font-weight: 600;
-  margin-bottom: 16px;
+  margin-bottom: 15px;
   color: ${({ theme }) => theme.colors.text1};
 `;
 
@@ -195,6 +324,46 @@ const ConfirmButton = styled(Button)`
 
   &:hover {
     background: ${({ theme }) => theme.colors.secondary1};
+  }
+`;
+
+const ImageInputWrapper = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 20px;
+`;
+
+const ImagePreview = styled.div`
+  width: 100px;
+  height: 100px;
+  overflow: hidden;
+  margin-bottom: 10px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+`;
+
+const ImageInput = styled.input`
+  display: none;
+`;
+
+const ImageLabel = styled.label`
+  padding: 8px 16px;
+  background: ${({ theme }) => theme.colors.background2};
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  color: ${({ theme }) => theme.colors.text1};
+
+  &:hover {
+    background: ${({ theme }) => theme.colors.background1};
   }
 `;
 

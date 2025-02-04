@@ -9,9 +9,9 @@ import { API_BASE_URL, USER } from "./host-config";
 
 // Axios 인스턴스 생성
 export const axiosInstance = axios.create({
-    headers: {
-        "Content-Type": "application/json",
-    },
+  headers: {
+    "Content-Type": "application/json",
+  },
 });
 
 /*
@@ -24,78 +24,84 @@ Axios Interceptor는 요청 또는 응답이 처리되기 전에 실행되는 �
 // 1번째 콜백에는 정상 동작 로직을 작성
 // 2번째 콜백에는 과정 중 에러가 발생할 경우 실행할 로직을 작성.
 axiosInstance.interceptors.request.use(
-    (config) => {
-        // 요청 보내기 전에 일괄 처리해야 할 내용을 콜백 함수로 전달.
-        const token = localStorage.getItem("ACCESS_TOKEN");
-        if (token) {
-            config.headers.Authorization = `Bearer ${token}`;
-        }
-        return config;
-    },
-    (error) => {
-        console.log(error);
-        Promise.reject(error);
+  (config) => {
+    if (config.url.includes("/notifications")) {
+      console.log("=== 알림 API 요청 인터셉트 ===");
+      console.log("요청 URL:", config.url);
+      console.log("요청 메서드:", config.method);
+      console.log("요청 헤더:", config.headers);
     }
+    const token = localStorage.getItem("ACCESS_TOKEN");
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    console.error("알림 API 요청 실패:", error);
+    return Promise.reject(error);
+  }
 );
 
 // Response용 인터셉터 설정
 axiosInstance.interceptors.response.use(
-    (response) => response, // 응답에 문제 없으면 그대로 응답 객체 리턴.
+  (response) => response, // 응답에 문제 없으면 그대로 응답 객체 리턴.
 
-    async (error) => {
-        console.log("response interceptor 동작함! 응답에 문제가 발생!");
-        console.log(error);
+  async (error) => {
+    console.log("response interceptor 동작함! 응답에 문제가 발생!");
+    console.log(error);
 
-        // 응답이 실패했는데, 토큰 재발급이 필요하지 않은 상황 (로그인을 애초에 하지 않음)
-        // 밑에 로직이 실행되지 않도록 return
-        if (error.response.data.message === "NO_LOGIN") {
-            return Promise.reject(error);
-        }
-
-        // 원본 요청의 정보를 기억해 놓자 -> 새 토큰 발급 받아서 다시 보내야 되니까.
-        const originalRequest = error.config;
-
-        // 토큰 재발급 로직 작성
-        // _retry의 값이 true라면 if문을 실행하지 마! -> 아까 했자나!
-        if (error.response.status === 401 && !originalRequest._retry) {
-            console.log("응답상태 401 발생! 토큰 재발급 필요!");
-
-            // _retry 속성은 사용자 정의 속성입니다. 최초 요청에서는 존재하지 않습니다.
-            // 만약 재요청 시에도 문제가 발생했다면 (refresh 만료 등),
-            // 더 이상 똑같은 요청을 반복해서 무한 루프에 빠지지 않도록
-            // 막아주는 역할을 합니다.
-            originalRequest._retry = true;
-
-            try {
-                const id = localStorage.getItem("USER_ID");
-                console.log(id);
-
-                const res = await axios.post(
-                    `${API_BASE_URL}${USER}/api/users/refresh`,
-                    {
-                        id,
-                    }
-                );
-
-                const token = res.data.result.token; // axios는 json() 안씁니다.
-                localStorage.setItem("ACCESS_TOKEN", token); // 동일한 이름으로 토큰 담기 (덮어씀)
-
-                // 실패한 원본 요청 정보에서 Authorization의 값을 새 토큰으로 바꿔놓자.
-                originalRequest.headers.Authorization = `Bearer ${token}`;
-
-                // axios 인스턴스의 기본 header Authorization도 새 토큰으로 바꿔놓자.
-                axiosInstance.defaults.headers.Authorization = `Bearer ${token}`;
-
-                // axiosInstance를 사용하여 다시 한 번 원본 요청을 보내고, 응답값은 원래 호출한 곳으로 리턴.
-                return axiosInstance(originalRequest);
-            } catch (e) {
-                console.log("인터셉터가 새토큰 요청했는데, rt가 만료됨!");
-                // Refresh 토큰도 만료가 된 상황 (로그아웃이 된 것처럼 보여줘야 함.)
-                // 재발급 요청도 거절당하면 인스턴스를 호출한 곳으로 에러 정보를 리턴.
-                return Promise.reject(e);
-            }
-        }
+    // 응답이 실패했는데, 토큰 재발급이 필요하지 않은 상황 (로그인을 애초에 하지 않음)
+    // 밑에 로직이 실행되지 않도록 return
+    if (error.response.data.message === "NO_LOGIN") {
+      return Promise.reject(error);
     }
+
+    // 원본 요청의 정보를 기억해 놓자 -> 새 토큰 발급 받아서 다시 보내야 되니까.
+    const originalRequest = error.config;
+
+    // 토큰 재발급 로직 작성
+    // _retry의 값이 true라면 if문을 실행하지 마! -> 아까 했자나!
+    if (error.response.status === 401 && !originalRequest._retry) {
+      console.log("응답상태 401 발생! 토큰 재발급 필요!");
+
+      // _retry 속성은 사용자 정의 속성입니다. 최초 요청에서는 존재하지 않습니다.
+      // 만약 재요청 시에도 문제가 발생했다면 (refresh 만료 등),
+      // 더 이상 똑같은 요청을 반복해서 무한 루프에 빠지지 않도록
+      // 막아주는 역할을 합니다.
+      originalRequest._retry = true;
+
+      try {
+        const id = localStorage.getItem("USER_ID");
+        console.log(id);
+
+        const res = await axios.post(
+          `${API_BASE_URL}${USER}/api/users/refresh`,
+          {
+            id,
+          }
+        );
+
+        const token = res.data.result.token; // axios는 json() 안씁니다.
+        localStorage.setItem("ACCESS_TOKEN", token); // 동일한 이름으로 토큰 담기 (덮어씀)
+
+        // 실패한 원본 요청 정보에서 Authorization의 값을 새 토큰으로 바꿔놓자.
+        originalRequest.headers.Authorization = `Bearer ${token}`;
+
+        // axios 인스턴스의 기본 header Authorization도 새 토큰으로 바꿔놓자.
+        axiosInstance.defaults.headers.Authorization = `Bearer ${token}`;
+
+        // axiosInstance를 사용하여 다시 한 번 원본 요청을 보내고, 응답값은 원래 호출한 곳으로 리턴.
+        return axiosInstance(originalRequest);
+      } catch (e) {
+        console.log("인터셉터가 새토큰 요청했는데, rt가 만료됨!");
+        localStorage.clear();
+        // Refresh 토큰도 만료가 된 상황 (로그아웃이 된 것처럼 보여줘야 함.)
+        // 재발급 요청도 거절당하면 인스턴스를 호출한 곳으로 에러 정보를 리턴.
+        return Promise.reject(e);
+      }
+    }
+  }
 );
 
 export default axiosInstance;

@@ -1,9 +1,60 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import styled from "styled-components";
+import axiosInstance from "../../configs/axios-config";
+import { API_BASE_URL, CALENDAR, USER } from "../../configs/host-config";
+import { BsTelephone, BsSearch } from "react-icons/bs";
+import { MdEmail } from "react-icons/md";
 
 const Emergency = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedDepartment, setSelectedDepartment] = useState("all");
+  const [departments, setDepartments] = useState({});
+  const [users, setUsers] = useState([]);
+
+  useEffect(() => {
+    const fetchDepartments = async () => {
+      try {
+        const response = await axiosInstance.get(
+          `${API_BASE_URL}${CALENDAR}/api/departments/map`
+        );
+        const data = await response.data;
+        setDepartments(data);
+      } catch (error) {
+        console.error("부서 정보를 불러오는데 실패했습니다:", error);
+      }
+    };
+
+    fetchDepartments();
+  }, []);
+
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        if (selectedDepartment === "all") {
+          const response = await axiosInstance.get(
+            `${API_BASE_URL}${USER}/api/admin/users/list`
+          );
+          setUsers(response.data.result || []);
+        } else {
+          const departmentId = Object.entries(departments).find(
+            ([key, value]) => value === selectedDepartment
+          )?.[0];
+
+          if (departmentId) {
+            const response = await axiosInstance.get(
+              `${API_BASE_URL}${USER}/api/admin/users/list?departmentId=${departmentId}`
+            );
+            setUsers(response.data.result || []);
+          }
+        }
+      } catch (error) {
+        console.error("사용자 정보를 불러오는데 실패했습니다:", error);
+        setUsers([]);
+      }
+    };
+
+    fetchUsers();
+  }, [selectedDepartment, departments]);
 
   return (
     <EmergencyContainer>
@@ -14,15 +65,17 @@ const Emergency = () => {
             onChange={(e) => setSelectedDepartment(e.target.value)}
           >
             <option value="all">전체 부서</option>
-            <option value="dev">개발팀</option>
-            <option value="design">디자인팀</option>
-            <option value="marketing">마케팅팀</option>
+            {Object.entries(departments).map(([key, value]) => (
+              <option key={key} value={value}>
+                {value}
+              </option>
+            ))}
           </DepartmentSelect>
           <SearchBar>
-            <img src="/images/icons/search.png" alt="검색" />
+            <BsSearch size={20} opacity={0.7} />
             <input
               type="text"
-              placeholder="이름, 부서, 직책으로 검색"
+              placeholder="이름, 직책으로 검색"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -31,24 +84,40 @@ const Emergency = () => {
       </EmergencyHeader>
 
       <ContactList>
-        {/* 연락처 목록이 여기에 매핑됩니다 */}
-        <ContactCard>
-          <ProfileImage src="/images/profile/user-avatar.png" alt="프로필" />
-          <ContactInfo>
-            <Name>오승준</Name>
-            <Position>팀장 | 개발팀</Position>
-            <ContactDetails>
-              <Detail>
-                <img src="/images/icons/phone.png" alt="전화" />
-                010-1234-5678
-              </Detail>
-              <Detail>
-                <img src="/images/icons/email.png" alt="이메일" />
-                example@email.com
-              </Detail>
-            </ContactDetails>
-          </ContactInfo>
-        </ContactCard>
+        {users
+          .filter(
+            (user) =>
+              user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+              user.position.toLowerCase().includes(searchTerm.toLowerCase())
+          )
+          .map((user) => (
+            <ContactCard key={user.userId}>
+              <ProfileImage
+                src={
+                  user.profileImage && user.profileImage.trim() !== " "
+                    ? user.profileImage
+                    : "/images/profile/user-avatar.png"
+                }
+                alt="프로필"
+              />
+              <ContactInfo>
+                <Name>{user.name}</Name>
+                <Position>
+                  {user.position} | {user.departmentName}
+                </Position>
+                <ContactDetails>
+                  <Detail>
+                    <BsTelephone size={14} opacity={0.7} />
+                    {user.phoneNum}
+                  </Detail>
+                  <Detail>
+                    <MdEmail size={14} opacity={0.7} />
+                    {user.email}
+                  </Detail>
+                </ContactDetails>
+              </ContactInfo>
+            </ContactCard>
+          ))}
       </ContactList>
     </EmergencyContainer>
   );
@@ -169,12 +238,6 @@ const Detail = styled.div`
   gap: 8px;
   font-size: 14px;
   color: ${({ theme }) => theme.colors.text1};
-
-  img {
-    width: 14px;
-    height: 14px;
-    opacity: 0.7;
-  }
 `;
 
 export default Emergency;
