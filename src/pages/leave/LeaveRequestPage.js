@@ -19,21 +19,19 @@ const LeaveRequestPage = () => {
       if (token) {
         try {
           // 사용자 정보 가져오기 (me API 호출)
-          const response = await axiosInstance.get(
-            "http://localhost:8181/user-service/api/users/me",
-            {
-              headers: { Authorization: `Bearer ${token}` },
-            }
-          );
+          await axiosInstance.get(`${API_BASE_URL}${USER}/api/users/me`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
         } catch (error) {
           console.error("Error fetching user data:", error);
           setStatus("로그인 정보가 유효하지 않습니다.");
         }
       }
     };
-
+  
     fetchData();
   }, []);
+  
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -52,7 +50,7 @@ const LeaveRequestPage = () => {
       try {
         // 사용자 정보 가져오기 (me API 호출)
         const response = await axiosInstance.get(
-          "http://localhost:8181/user-service/api/users/me",
+          `${API_BASE_URL}${USER}/api/users/me`,
           {
             headers: {
               Authorization: `Bearer ${token}`, // 헤더에 JWT 토큰 추가
