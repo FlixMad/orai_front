@@ -172,10 +172,6 @@ const ChatRoom = () => {
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    console.log('현재 채팅방 ID:', chatRoomId);
-  }, [chatRoomId]);
-
-  useEffect(() => {
     // chatRoomId가 변경될 때 메시지 상태 초기화
     setMessages([]);
   }, [chatRoomId]);
@@ -243,9 +239,7 @@ const ChatRoom = () => {
       connectHeaders: {
         Authorization: `Bearer ${localStorage.getItem('ACCESS_TOKEN')}`,
       },
-      debug: function (str) {
-        console.log(str);
-      },
+      debug: function () {},
       reconnectDelay: 5000,
       heartbeatIncoming: 4000,
       heartbeatOutgoing: 4000,

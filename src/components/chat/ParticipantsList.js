@@ -1,5 +1,6 @@
 import styled from 'styled-components';
 import { API_BASE_URL, CHAT } from '../../configs/host-config';
+import { GiQueenCrown } from 'react-icons/gi';
 
 const ParticipantsOverlay = styled.div`
   position: absolute;
@@ -170,6 +171,9 @@ const ParticipantsList = ({
             alt={participant.name}
           />
           <ParticipantName>
+            {participant.userId === participant.creatorId && (
+              <GiQueenCrown style={{ marginRight: '4px', color: '#FFD700' }} />
+            )}
             {participant.name.length > 3
               ? `${participant.name.slice(0, 3)}...`
               : participant.name}

@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import axiosInstance from '../../configs/axios-config';
 import { API_BASE_URL, CHAT } from '../../configs/host-config';
 import PropTypes from 'prop-types';
+import { GiQueenCrown } from 'react-icons/gi';
 
 const MessageListContainer = styled.div`
   flex: 1;
@@ -87,6 +88,9 @@ const SenderInfo = styled.div`
 const SenderName = styled.div`
   font-size: 12px;
   color: ${({ theme }) => theme.colors.text2};
+  display: flex;
+  align-items: center;
+  gap: 4px;
 `;
 
 const SenderImage = styled.img`
@@ -313,7 +317,12 @@ const MessageList = ({ messages, setMessages, formatDate, chatRoomId }) => {
               $isDeleted={isDeleted}
             >
               {!isMine && !isSystem && !isDeleted && isFirstMessage && (
-                <SenderName>{message.senderName || '알 수 없음'}</SenderName>
+                <SenderName>
+                  {message.senderId === message.creatorId && (
+                    <GiQueenCrown style={{ color: '#FFD700' }} />
+                  )}
+                  {message.senderName || '알 수 없음'}
+                </SenderName>
               )}
               <MessageContent
                 $isMine={isMine}
