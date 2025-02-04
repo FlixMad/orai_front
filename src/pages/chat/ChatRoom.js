@@ -8,6 +8,7 @@ import ParticipantsList from '../../components/chat/ParticipantsList';
 import MessageList from '../../components/chat/MessageList';
 import { useParams, useNavigate } from 'react-router-dom';
 import AddChatMember from './AddChatMember';
+import { GiQueenCrown } from 'react-icons/gi';
 
 const ChatRoomContainer = styled.div`
   display: flex;
@@ -171,10 +172,6 @@ const ChatRoom = () => {
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    console.log('현재 채팅방 ID:', chatRoomId);
-  }, [chatRoomId]);
-
-  useEffect(() => {
     // chatRoomId가 변경될 때 메시지 상태 초기화
     setMessages([]);
   }, [chatRoomId]);
@@ -242,9 +239,7 @@ const ChatRoom = () => {
       connectHeaders: {
         Authorization: `Bearer ${localStorage.getItem('ACCESS_TOKEN')}`,
       },
-      debug: function (str) {
-        console.log(str);
-      },
+      debug: function () {},
       reconnectDelay: 5000,
       heartbeatIncoming: 4000,
       heartbeatOutgoing: 4000,
@@ -526,7 +521,12 @@ const ChatRoom = () => {
               src={chatRoomInfo.image || '/default-chat-room.png'}
               alt={chatRoomInfo.name}
             />
-            <ChatRoomName>{chatRoomInfo.name}</ChatRoomName>
+            <ChatRoomName>
+              {chatRoomInfo.name}
+              {currentUserId === chatRoomInfo.creatorId && (
+                <GiQueenCrown style={{ marginLeft: '4px', color: '#FFD700' }} />
+              )}
+            </ChatRoomName>
             <ParticipantsCount
               onClick={() => setShowParticipants(!showParticipants)}
             >

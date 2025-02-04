@@ -1,5 +1,8 @@
 import { useState } from "react";
 import styled from "styled-components";
+import LeaveRequestPage from "./LeaveRequestPage";  // 휴가 신청 페이지
+import LeaveHistoryPage from "./LeaveHistoryPage";  // 휴가 내역 페이지
+import LeaveApprovalPage from "./LeaveApprovalPage";  // 휴가 승인 페이지
 
 const LeaveManagement = () => {
   const [activeTab, setActiveTab] = useState("request");
@@ -30,9 +33,9 @@ const LeaveManagement = () => {
       </Header>
 
       <Content>
-        {activeTab === "request" && (
-          <LeaveRequestForm>{/* 휴가 신청 폼 내용 */}</LeaveRequestForm>
-        )}
+        {activeTab === "request" && <LeaveRequestPage />} {/* 휴가 신청 페이지 */}
+        {activeTab === "history" && <LeaveHistoryPage />} {/* 휴가 내역 페이지 */}
+        {activeTab === "approval" && <LeaveApprovalPage />} {/* 휴가 승인 페이지 */}
       </Content>
     </Container>
   );
@@ -72,10 +75,6 @@ const Content = styled.div`
   border-radius: 12px;
   padding: 24px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-`;
-
-const LeaveRequestForm = styled.div`
-  // 휴가 신청 폼 스타일
 `;
 
 export default LeaveManagement;

@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import axiosInstance from '../../configs/axios-config';
 import { API_BASE_URL, CHAT } from '../../configs/host-config';
 import PropTypes from 'prop-types';
+import { GiQueenCrown } from 'react-icons/gi';
 
 const MessageListContainer = styled.div`
   flex: 1;
@@ -24,15 +25,20 @@ const MessageItem = styled.div`
   display: flex;
   justify-content: ${({ $isMine, $isSystem }) =>
     $isSystem ? 'center' : $isMine ? 'flex-end' : 'flex-start'};
-  margin-bottom: 16px;
+  margin-bottom: ${({ $isFirstMessage }) => ($isFirstMessage ? '16px' : '4px')};
+  align-items: flex-start;
+  padding-left: ${({ $isMine, $isSystem, $isDeleted }) =>
+    $isMine || $isSystem || $isDeleted ? '44px' : '0'};
 `;
 
 const MessageWrapper = styled.div`
   display: flex;
   flex-direction: column;
-  align-items: ${({ $isMine, $isSystem }) =>
-    $isSystem ? 'center' : $isMine ? 'flex-end' : 'flex-start'};
+  align-items: ${({ $isMine, $isSystem, $isDeleted }) =>
+    $isSystem || $isDeleted ? 'center' : $isMine ? 'flex-end' : 'flex-start'};
   gap: 4px;
+  margin-left: ${({ $isMine, $isSystem, $isDeleted }) =>
+    !$isMine && !$isSystem && !$isDeleted ? '8px' : '0'};
 `;
 
 const MessageContent = styled.div`
@@ -72,10 +78,32 @@ const MessageTime = styled.div`
   margin: 0 4px;
 `;
 
+const SenderInfo = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+`;
+
 const SenderName = styled.div`
   font-size: 12px;
   color: ${({ theme }) => theme.colors.text2};
-  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+`;
+
+const SenderImage = styled.img`
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+`;
+
+const EmptySpace = styled.div`
+  width: 36px;
+  flex-shrink: 0;
 `;
 
 const EditButtons = styled.div`
@@ -164,6 +192,22 @@ const MessageList = ({ messages, setMessages, formatDate, chatRoomId }) => {
   }, [messages]);
 
   useEffect(() => {
+    // 컴포넌트가 마운트될 때(채팅방 입장 시) 마지막 메시지 읽음 처리
+    if (messages.length > 0) {
+      const lastMessage = messages[messages.length - 1];
+      if (lastMessage.messageId) {
+        axiosInstance
+          .post(`${API_BASE_URL}${CHAT}/rooms/${chatRoomId}/read`, {
+            messageId: lastMessage.messageId,
+          })
+          .catch((error) => {
+            console.error('메시지 읽음 처리 실패:', error);
+          });
+      }
+    }
+  }, [chatRoomId]); // chatRoomId가 변경될 때만 실행
+
+  useEffect(() => {
     // 메시지 목록이 업데이트될 때마다 마지막 메시지 읽음 처리
     if (messages.length > 0 && document.hasFocus()) {
       const lastMessage = messages[messages.length - 1];
@@ -228,17 +272,21 @@ const MessageList = ({ messages, setMessages, formatDate, chatRoomId }) => {
 
   return (
     <MessageListContainer ref={containerRef}>
-      {messages.map((message) => {
+      {messages.map((message, index) => {
         const isMine = message.senderId === currentUserId;
         const isSystem = message.type === 'SYSTEM';
         const isDeleted = message.type === 'DELETE';
-        const isEdited = message.type === 'EDIT';
-        const userMessages = messages.filter(
-          (msg) => msg.senderId === currentUserId && msg.type !== 'SYSTEM'
-        );
-        const lastUserMessageId =
-          userMessages[userMessages.length - 1]?.messageId;
-        const isLastMessage = message.messageId === lastUserMessageId;
+
+        const previousMessage = index > 0 ? messages[index - 1] : null;
+        const isFirstMessage =
+          !previousMessage ||
+          previousMessage.senderId !== message.senderId ||
+          isSystem ||
+          previousMessage.type === 'SYSTEM' ||
+          isDeleted ||
+          previousMessage.type === 'DELETE' ||
+          new Date(message.createdAt) - new Date(previousMessage.createdAt) >
+            5 * 60 * 1000;
 
         return (
           <MessageItem
@@ -247,10 +295,34 @@ const MessageList = ({ messages, setMessages, formatDate, chatRoomId }) => {
             }`}
             $isMine={isMine}
             $isSystem={isSystem}
+            $isDeleted={isDeleted}
+            $isFirstMessage={isFirstMessage}
           >
-            <MessageWrapper $isMine={isMine} $isSystem={isSystem}>
-              {!isMine && !isSystem && !isDeleted && (
-                <SenderName>{message.senderName || '알 수 없음'}</SenderName>
+            {!isMine && !isSystem && !isDeleted ? (
+              isFirstMessage ? (
+                <SenderImage
+                  src={message.senderImage || '/default-profile.png'}
+                  alt={message.senderName}
+                  onError={(e) => {
+                    e.target.src = '/default-profile.png';
+                  }}
+                />
+              ) : (
+                <EmptySpace />
+              )
+            ) : null}
+            <MessageWrapper
+              $isMine={isMine}
+              $isSystem={isSystem}
+              $isDeleted={isDeleted}
+            >
+              {!isMine && !isSystem && !isDeleted && isFirstMessage && (
+                <SenderName>
+                  {message.senderId === message.creatorId && (
+                    <GiQueenCrown style={{ color: '#FFD700' }} />
+                  )}
+                  {message.senderName || '알 수 없음'}
+                </SenderName>
               )}
               <MessageContent
                 $isMine={isMine}
@@ -260,10 +332,7 @@ const MessageList = ({ messages, setMessages, formatDate, chatRoomId }) => {
                   !isSystem && !isDeleted && handleMessageClick(e, message)
                 }
                 style={{
-                  cursor:
-                    isMine && isLastMessage && !isDeleted
-                      ? 'pointer'
-                      : 'default',
+                  cursor: isMine && !isDeleted ? 'pointer' : 'default',
                 }}
               >
                 {editingMessage?.messageId === message.messageId ? (
@@ -283,7 +352,7 @@ const MessageList = ({ messages, setMessages, formatDate, chatRoomId }) => {
                 ) : (
                   <>
                     {message.content}
-                    {isEdited && !isDeleted && (
+                    {message.type === 'EDIT' && !isDeleted && (
                       <EditedMark>(수정됨)</EditedMark>
                     )}
                   </>
@@ -291,7 +360,6 @@ const MessageList = ({ messages, setMessages, formatDate, chatRoomId }) => {
               </MessageContent>
               {selectedMessageId === message.messageId &&
                 isMine &&
-                isLastMessage &&
                 !isDeleted && (
                   <ContextMenu $isMine={isMine}>
                     <button onClick={() => handleEdit(message)}>수정</button>

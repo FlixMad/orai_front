@@ -9,6 +9,7 @@ import { userState } from '../../atoms/userState';
 import { useNavigate, useLocation } from 'react-router-dom';
 import AddChatMember from './AddChatMember';
 import { IoMdSearch } from 'react-icons/io';
+import { GiQueenCrown } from 'react-icons/gi';
 
 const ChatRoomList = ({ onChatRoomCreated }) => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -29,7 +30,6 @@ const ChatRoomList = ({ onChatRoomCreated }) => {
   const [name, setName] = useState('');
   const [image, setImage] = useState('');
   const [selectedUsers, setSelectedUsers] = useState([]);
-  const [chatRoomDetails, setChatRoomDetails] = useState({});
 
   useEffect(() => {
     const debounceTimeout = setTimeout(() => {
@@ -56,9 +56,7 @@ const ChatRoomList = ({ onChatRoomCreated }) => {
       connectHeaders: {
         Authorization: `Bearer ${localStorage.getItem('ACCESS_TOKEN')}`,
       },
-      debug: function (str) {
-        console.log(str);
-      },
+      debug: function () {},
       reconnectDelay: 5000,
       heartbeatIncoming: 4000,
       heartbeatOutgoing: 4000,
@@ -67,19 +65,54 @@ const ChatRoomList = ({ onChatRoomCreated }) => {
     client.onConnect = () => {
       setStompClient(client);
 
-      // 채팅방 업데이트 구독 추가
-      if (currentChatId) {
-        client.subscribe(`/sub/${currentChatId}/chat`, (message) => {
+      // 모든 채팅방의 메시지를 구독
+      chatRooms.forEach((room) => {
+        client.subscribe(`/sub/${room.chatRoomId}/chat`, (message) => {
           const messageData = JSON.parse(message.body);
+          const currentUserId = localStorage.getItem('userId');
 
-          // 모든 메시지 타입에 대해 채팅방 목록 새로고침
-          fetchChatRooms();
+          // 채팅방 목록 업데이트 (마지막 메시지, unreadCount)
+          setChatRooms((prevRooms) => {
+            return prevRooms.map((room) => {
+              if (room.chatRoomId === messageData.chatRoomId) {
+                return {
+                  ...room,
+                  lastMessage: messageData.content,
+                  // 현재 채팅방이 아니고, 메시지 발신자가 자신이 아닐 경우에만 unreadCount 증가
+                  unreadCount:
+                    currentChatId !== `${room.chatRoomId}` &&
+                    messageData.senderId !== currentUserId
+                      ? (room.unreadCount || 0) + 1
+                      : room.unreadCount,
+                };
+              }
+              return room;
+            });
+          });
+
+          // 필터링된 채팅방 목록도 동일하게 업데이트
+          setFilteredChatRooms((prevRooms) => {
+            return prevRooms.map((room) => {
+              if (room.chatRoomId === messageData.chatRoomId) {
+                return {
+                  ...room,
+                  lastMessage: messageData.content,
+                  unreadCount:
+                    currentChatId !== `${room.chatRoomId}` &&
+                    messageData.senderId !== currentUserId
+                      ? (room.unreadCount || 0) + 1
+                      : room.unreadCount,
+                };
+              }
+              return room;
+            });
+          });
         });
-      }
+      });
 
+      // 채팅방 업데이트 구독 (새로운 채팅방 생성, 멤버 초대 등)
       client.subscribe(`/queue/queue`, (notification) => {
         const data = JSON.parse(notification.body);
-        // 채팅방 삭제 알림 처리
         alert(data.message);
         fetchChatRooms(); // 채팅방 목록 새로고침
       });
@@ -92,7 +125,7 @@ const ChatRoomList = ({ onChatRoomCreated }) => {
         client.deactivate();
       }
     };
-  }, [currentUser.id, currentChatId]);
+  }, [currentUser.id, currentChatId, chatRooms]);
 
   const fetchChatRooms = async () => {
     try {
@@ -205,7 +238,7 @@ const ChatRoomList = ({ onChatRoomCreated }) => {
         handleCloseModal();
         onChatRoomCreated?.(chatRoomData);
         fetchChatRooms();
-        navigate(`/chat/${chatRoomData.chatRoomId}`);
+        navigate(`/chat/${chatRoomId}`);
       }
     } catch (error) {
       console.error('채팅방 생성 실패:', error);
@@ -302,10 +335,32 @@ const ChatRoomList = ({ onChatRoomCreated }) => {
     }
   };
 
+  // 채팅방을 클릭했을 때 해당 채팅방의 unreadCount를 0으로 초기화하고 서버에 읽음 처리 요청
   const handleChatRoomClick = async (chatRoomId) => {
     try {
-      // 채팅방 입장 권한 확인
-      await axiosInstance.get(`${API_BASE_URL}${CHAT}/${chatRoomId}/chatRoom`);
+      const response = await axiosInstance.get(
+        `${API_BASE_URL}${CHAT}/${chatRoomId}/chatRoom`
+      );
+
+      // 마지막 메시지 ID를 서버에 전송하여 읽음 처리
+      if (response.data.lastMessageId) {
+        await axiosInstance.post(
+          `${API_BASE_URL}${CHAT}/rooms/${chatRoomId}/read`,
+          {
+            messageId: response.data.lastMessageId,
+          }
+        );
+      }
+
+      // 채팅방 목록에서 해당 채팅방의 unreadCount 초기화
+      const updateRooms = (prevRooms) =>
+        prevRooms.map((room) =>
+          room.chatRoomId === chatRoomId ? { ...room, unreadCount: 0 } : room
+        );
+
+      setChatRooms(updateRooms);
+      setFilteredChatRooms(updateRooms);
+
       navigate(`/chat/${chatRoomId}`);
     } catch (error) {
       if (error.response?.status === 400) {
@@ -362,7 +417,14 @@ const ChatRoomList = ({ onChatRoomCreated }) => {
                 )}
               </RoomIcon>
               <RoomInfo>
-                <RoomTitle>{room.name}</RoomTitle>
+                <RoomTitle>
+                  {room.name}
+                  {room.creatorId === localStorage.getItem('userId') && (
+                    <GiQueenCrown
+                      style={{ marginLeft: '4px', color: '#FFD700' }}
+                    />
+                  )}
+                </RoomTitle>
                 <LastMessage>
                   {(room.lastMessage || '새로운 채팅방입니다.').length > 25
                     ? `${(room.lastMessage || '새로운 채팅방입니다.').slice(
