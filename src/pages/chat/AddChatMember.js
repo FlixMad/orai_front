@@ -1,9 +1,9 @@
-import { useState, useEffect, useCallback, useRef } from "react";
-import styled from "styled-components";
-import axiosInstance from "../../configs/axios-config";
-import { API_BASE_URL, USER } from "../../configs/host-config";
-import { debounce } from "lodash";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect, useCallback, useRef } from 'react';
+import styled from 'styled-components';
+import axiosInstance from '../../configs/axios-config';
+import { API_BASE_URL, USER } from '../../configs/host-config';
+import { debounce } from 'lodash';
+import { useNavigate } from 'react-router-dom';
 
 const AddChatMember = ({
   onSubmit,
@@ -12,8 +12,8 @@ const AddChatMember = ({
   onSelectedUsersChange,
   currentParticipants,
 }) => {
-  const [searchTerm, setSearchTerm] = useState("");
-  const [localSearchTerm, setLocalSearchTerm] = useState("");
+  const [searchTerm, setSearchTerm] = useState('');
+  const [localSearchTerm, setLocalSearchTerm] = useState('');
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [selectedUsers, setSelectedUsers] = useState(
@@ -72,9 +72,9 @@ const AddChatMember = ({
           size: size,
         };
 
-        if (searchTerm.startsWith("@")) {
+        if (searchTerm.startsWith('@')) {
           params.position = searchTerm.slice(1);
-        } else if (searchTerm.startsWith("#")) {
+        } else if (searchTerm.startsWith('#')) {
           params.departmentId = searchTerm.slice(1);
         } else {
           params.name = searchTerm;
@@ -87,17 +87,28 @@ const AddChatMember = ({
 
         const userData = response.data.result.content || [];
         const isLast = response.data.result.last;
+        const currentUserId = localStorage.getItem('userId');
 
         const formattedUsers = userData
-          .filter((user) => !currentParticipants?.includes(user.userId))
+          .filter((user) => {
+            if (user.userId === currentUserId) {
+              return false;
+            }
+            return (
+              !currentParticipants ||
+              !currentParticipants.some(
+                (participant) => participant.userId === user.userId
+              )
+            );
+          })
           .map((user) => ({
             id: user.userId,
             name: user.name,
             email: user.email,
-            department: user.departmentId || "미지정",
-            position: user.position || "미지정",
-            status: user.accountActive ? "재직중" : "비활성",
-            profileImage: user.profileImage || "/images/profiles/default.jpg",
+            department: user.departmentId || '미지정',
+            position: user.position || '미지정',
+            status: user.accountActive ? '재직중' : '비활성',
+            profileImage: user.profileImage || '/images/profiles/default.jpg',
             phoneNum: user.phoneNum,
           }));
 
@@ -107,8 +118,8 @@ const AddChatMember = ({
         setHasMore(!isLast);
         setError(null);
       } catch (err) {
-        console.error("사용자 목록을 불러오는데 실패했습니다:", err);
-        setError("사용자 목록을 불러오는데 실패했습니다.");
+        console.error('사용자 목록을 불러오는데 실패했습니다:', err);
+        setError('사용자 목록을 불러오는데 실패했습니다.');
       } finally {
         setLoading(false);
       }
@@ -119,7 +130,7 @@ const AddChatMember = ({
 
   const handleAddMembers = async () => {
     if (selectedUsers.length === 0) {
-      alert("최소 한 명 이상의 멤버를 선택해주세요.");
+      alert('최소 한 명 이상의 멤버를 선택해주세요.');
       return;
     }
 
@@ -127,8 +138,8 @@ const AddChatMember = ({
       const userIds = selectedUsers.map((user) => user.id);
       await onSubmit(userIds);
     } catch (error) {
-      console.error("멤버 추가 실패:", error);
-      alert("멤버 추가에 실패했습니다.");
+      console.error('멤버 추가 실패:', error);
+      alert('멤버 추가에 실패했습니다.');
     }
   };
 
@@ -197,8 +208,8 @@ const AddChatMember = ({
               }}
             >
               {selectedUsers.some((selected) => selected.id === user.id)
-                ? "선택됨"
-                : "추가"}
+                ? '선택됨'
+                : '추가'}
             </AddButton>
           </UserItem>
         ))}
@@ -322,7 +333,7 @@ const AddButton = styled.button`
   font-size: 13px;
   background: ${({ selected, theme }) =>
     selected ? theme.colors.background : theme.colors.primary};
-  color: ${({ selected, theme }) => (selected ? theme.colors.text1 : "white")};
+  color: ${({ selected, theme }) => (selected ? theme.colors.text1 : 'white')};
 `;
 
 const LoadingText = styled.div`
@@ -390,7 +401,7 @@ const RemoveButton = styled.button`
   padding: 5px 12px;
   border-radius: 5px;
   font-size: 13px;
-  background: ${({ theme }) => theme.colors.error + "19"};
+  background: ${({ theme }) => theme.colors.error + '19'};
   color: ${({ theme }) => theme.colors.error};
 `;
 
