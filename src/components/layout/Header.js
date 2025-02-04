@@ -145,18 +145,16 @@ const Header = () => {
       }
 
       try {
-        const response = await fetch(`${API_BASE_URL}${USER}/api/users/me`, {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
+        const response = await axiosInstance.get(
+          `${API_BASE_URL}${USER}/api/users/me`
+        );
+        console.log(response);
 
-        if (!response.ok) {
+        if (response.status !== 200) {
           throw new Error("데이터 로드 실패");
         }
 
-        const data = await response.json();
+        const data = response.data;
         setUser(data);
       } catch (error) {
         setError("회원 정보 조회 중 오류가 발생했습니다.");
