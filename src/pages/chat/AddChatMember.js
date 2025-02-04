@@ -89,7 +89,10 @@ const AddChatMember = ({
         const isLast = response.data.result.last;
 
         const formattedUsers = userData
-          .filter((user) => !currentParticipants?.includes(user.userId))
+          .filter(
+            (user) =>
+              !currentParticipants || !currentParticipants.includes(user.userId)
+          )
           .map((user) => ({
             id: user.userId,
             name: user.name,
