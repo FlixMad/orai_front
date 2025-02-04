@@ -39,11 +39,14 @@ const LeaveApprovalPage = () => {
           return;
         }
 
-        const response = await axiosInstance.get(`${API_APPROVALS_BY_USER}/${userId}`, {
-          headers: {
-            Authorization: `Bearer ${token}`
-          },
-        });
+        const response = await axiosInstance.get(
+          `${API_APPROVALS_BY_USER}/${userId}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
         setApprovals(response.data);
       } catch (error) {
         console.error("Error fetching approval data:", error);
@@ -64,12 +67,14 @@ const LeaveApprovalPage = () => {
         { approvalId: approval.approvalId },
         {
           headers: {
-            Authorization: `Bearer ${token}`
+            Authorization: `Bearer ${token}`,
           },
         }
       );
       setStatus("APPROVED");
-      setApprovals((prev) => prev.filter((request) => request.vacationId !== approval.vacationId));
+      setApprovals((prev) =>
+        prev.filter((request) => request.vacationId !== approval.vacationId)
+      );
     } catch (error) {
       setStatus("ERROR_APPROVING");
       console.error("Error approving vacation:", error);
@@ -85,12 +90,14 @@ const LeaveApprovalPage = () => {
         { approvalId: approval.approvalId },
         {
           headers: {
-            Authorization: `Bearer ${token}`
+            Authorization: `Bearer ${token}`,
           },
         }
       );
       setStatus("REJECTED");
-      setApprovals((prev) => prev.filter((request) => request.vacationId !== approval.vacationId));
+      setApprovals((prev) =>
+        prev.filter((request) => request.vacationId !== approval.vacationId)
+      );
     } catch (error) {
       setStatus("ERROR_REJECTING");
       console.error("Error rejecting vacation:", error);
@@ -100,7 +107,11 @@ const LeaveApprovalPage = () => {
   return (
     <Container>
       <h2>휴가 승인</h2>
-      {status && <StatusMessage status={status}>{status === "APPROVED" ? "승인 완료!" : "거절 완료!"}</StatusMessage>}
+      {status && (
+        <StatusMessage status={status}>
+          {status === "APPROVED" ? "승인 완료!" : "거절 완료!"}
+        </StatusMessage>
+      )}
       <ApprovalList>
         {loading ? (
           <p>로딩 중...</p>
@@ -108,10 +119,20 @@ const LeaveApprovalPage = () => {
           approvals.map((approval) => (
             <ApprovalItem key={approval.approvalId}>
               <p>제목: {approval.title}</p>
+              <p>신청자: {approval.requestUserName} </p> {/* ✅ UUID 대신 이름 표시 */}
               <p>상태: {approval.vacationState}</p>
+              <p>
+                휴가 기간: {approval.startDate} ~ {approval.endDate}
+              </p>{" "}
+              {/* ✅ 시작일 ~ 종료일 추가 */}
+          
               <ButtonContainer>
-                <ApproveButton onClick={() => handleApprove(approval)}>승인</ApproveButton>
-                <RejectButton onClick={() => handleReject(approval)}>거절</RejectButton>
+                <ApproveButton onClick={() => handleApprove(approval)}>
+                  승인
+                </ApproveButton>
+                <RejectButton onClick={() => handleReject(approval)}>
+                  거절
+                </RejectButton>
               </ButtonContainer>
             </ApprovalItem>
           ))
@@ -130,7 +151,8 @@ const Container = styled.div`
 const StatusMessage = styled.div`
   margin-bottom: 16px;
   padding: 12px;
-  background-color: ${({ status }) => (status === "APPROVED" ? "#d4edda" : "#f8d7da")};
+  background-color: ${({ status }) =>
+    status === "APPROVED" ? "#d4edda" : "#f8d7da"};
   color: ${({ status }) => (status === "APPROVED" ? "#155724" : "#721c24")};
   border-radius: 4px;
   text-align: center;
