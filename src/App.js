@@ -30,9 +30,11 @@ const PrivateRoute = ({ children }) => {
   };
 
   if (
-    !verifyToken() &&
-    location.pathname !== "/login" &&
-    location.pathname !== "/devLogin"
+    !token ||
+    (token &&
+      !verifyToken() &&
+      location.pathname !== "/login" &&
+      location.pathname !== "/devLogin")
   ) {
     return <Navigate to="/login" replace />;
   }
