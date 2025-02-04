@@ -48,84 +48,98 @@ const ChatRoomList = ({ onChatRoomCreated }) => {
     fetchChatRooms();
 
     const client = new Client({
-      webSocketFactory: () =>
-        new SockJS(`${API_BASE_URL}/stomp`, null, {
-          transports: ['websocket'],
-          secure: true,
-        }),
+      webSocketFactory: () => new SockJS(`${API_BASE_URL}/stomp`),
       connectHeaders: {
         Authorization: `Bearer ${localStorage.getItem('ACCESS_TOKEN')}`,
       },
-      debug: function () {},
+      debug: (str) => {
+        console.log('STOMP Debug:', str); // 디버깅을 위한 로그 추가
+      },
       reconnectDelay: 5000,
       heartbeatIncoming: 4000,
       heartbeatOutgoing: 4000,
+      onStompError: (frame) => {
+        console.error('STOMP error:', frame);
+      },
+      onWebSocketError: (event) => {
+        console.error('WebSocket error:', event);
+      },
+      onWebSocketClose: (event) => {
+        console.log('WebSocket closed:', event);
+      },
     });
 
     client.onConnect = () => {
+      console.log('WebSocket 연결 성공');
       setStompClient(client);
 
-      // 모든 채팅방의 메시지를 구독
-      chatRooms.forEach((room) => {
-        client.subscribe(`/sub/${room.chatRoomId}/chat`, (message) => {
-          const messageData = JSON.parse(message.body);
-          const currentUserId = localStorage.getItem('userId');
+      // 채팅방 목록이 있을 때만 구독 시도
+      if (chatRooms && chatRooms.length > 0) {
+        chatRooms.forEach((room) => {
+          client.subscribe(`/sub/${room.chatRoomId}/chat`, (message) => {
+            const messageData = JSON.parse(message.body);
+            const currentUserId = localStorage.getItem('userId');
 
-          // 채팅방 목록 업데이트 (마지막 메시지, unreadCount)
-          setChatRooms((prevRooms) => {
-            return prevRooms.map((room) => {
-              if (room.chatRoomId === messageData.chatRoomId) {
-                return {
-                  ...room,
-                  lastMessage: messageData.content,
-                  // 현재 채팅방이 아니고, 메시지 발신자가 자신이 아닐 경우에만 unreadCount 증가
-                  unreadCount:
-                    currentChatId !== `${room.chatRoomId}` &&
-                    messageData.senderId !== currentUserId
-                      ? (room.unreadCount || 0) + 1
-                      : room.unreadCount,
-                };
-              }
-              return room;
+            // 채팅방 목록 업데이트 (마지막 메시지, unreadCount)
+            setChatRooms((prevRooms) => {
+              return prevRooms.map((room) => {
+                if (room.chatRoomId === messageData.chatRoomId) {
+                  return {
+                    ...room,
+                    lastMessage: messageData.content,
+                    // 현재 채팅방이 아니고, 메시지 발신자가 자신이 아닐 경우에만 unreadCount 증가
+                    unreadCount:
+                      currentChatId !== `${room.chatRoomId}` &&
+                      messageData.senderId !== currentUserId
+                        ? (room.unreadCount || 0) + 1
+                        : room.unreadCount,
+                  };
+                }
+                return room;
+              });
             });
-          });
 
-          // 필터링된 채팅방 목록도 동일하게 업데이트
-          setFilteredChatRooms((prevRooms) => {
-            return prevRooms.map((room) => {
-              if (room.chatRoomId === messageData.chatRoomId) {
-                return {
-                  ...room,
-                  lastMessage: messageData.content,
-                  unreadCount:
-                    currentChatId !== `${room.chatRoomId}` &&
-                    messageData.senderId !== currentUserId
-                      ? (room.unreadCount || 0) + 1
-                      : room.unreadCount,
-                };
-              }
-              return room;
+            // 필터링된 채팅방 목록도 동일하게 업데이트
+            setFilteredChatRooms((prevRooms) => {
+              return prevRooms.map((room) => {
+                if (room.chatRoomId === messageData.chatRoomId) {
+                  return {
+                    ...room,
+                    lastMessage: messageData.content,
+                    unreadCount:
+                      currentChatId !== `${room.chatRoomId}` &&
+                      messageData.senderId !== currentUserId
+                        ? (room.unreadCount || 0) + 1
+                        : room.unreadCount,
+                  };
+                }
+                return room;
+              });
             });
           });
         });
-      });
+      }
 
-      // 채팅방 업데이트 구독 (새로운 채팅방 생성, 멤버 초대 등)
+      // 채팅방 업데이트 구독
       client.subscribe(`/queue/queue`, (notification) => {
         const data = JSON.parse(notification.body);
         alert(data.message);
-        fetchChatRooms(); // 채팅방 목록 새로고침
+        fetchChatRooms();
       });
     };
 
-    client.activate();
+    try {
+      client.activate();
+    } catch (error) {
+      console.error('WebSocket 연결 실패:', error);
+    }
 
     return () => {
-      if (client) {
+      if (client.connected) {
         client.deactivate();
       }
     };
-  }, [currentUser.id, currentChatId, chatRooms]);
+  }, [currentUser.id, currentChatId]); // chatRooms 의존성 제거
 
   const fetchChatRooms = async () => {
     try {
