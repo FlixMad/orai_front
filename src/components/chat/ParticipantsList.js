@@ -9,7 +9,7 @@ const ParticipantsOverlay = styled.div`
   border: 1px solid ${({ theme }) => theme.colors.border};
   border-radius: 8px;
   padding: 16px;
-  width: 200px;
+  width: 240px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   z-index: 150;
   margin-top: 12px;
@@ -169,7 +169,11 @@ const ParticipantsList = ({
             src={participant.profileImage || '/default-profile.png'}
             alt={participant.name}
           />
-          <ParticipantName>{participant.name}</ParticipantName>
+          <ParticipantName>
+            {participant.name.length > 3
+              ? `${participant.name.slice(0, 3)}...`
+              : participant.name}
+          </ParticipantName>
           {isCreator && participant.userId !== participant.creatorId && (
             <RemoveButton onClick={() => handleRemoveUser(participant.userId)}>
               내보내기
