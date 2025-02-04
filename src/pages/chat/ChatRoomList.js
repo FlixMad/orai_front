@@ -9,6 +9,7 @@ import { userState } from '../../atoms/userState';
 import { useNavigate, useLocation } from 'react-router-dom';
 import AddChatMember from './AddChatMember';
 import { IoMdSearch } from 'react-icons/io';
+import { GiQueenCrown } from 'react-icons/gi';
 
 const ChatRoomList = ({ onChatRoomCreated }) => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -55,9 +56,7 @@ const ChatRoomList = ({ onChatRoomCreated }) => {
       connectHeaders: {
         Authorization: `Bearer ${localStorage.getItem('ACCESS_TOKEN')}`,
       },
-      debug: function (str) {
-        console.log(str);
-      },
+      debug: function () {},
       reconnectDelay: 5000,
       heartbeatIncoming: 4000,
       heartbeatOutgoing: 4000,
@@ -418,7 +417,14 @@ const ChatRoomList = ({ onChatRoomCreated }) => {
                 )}
               </RoomIcon>
               <RoomInfo>
-                <RoomTitle>{room.name}</RoomTitle>
+                <RoomTitle>
+                  {room.name}
+                  {room.creatorId === localStorage.getItem('userId') && (
+                    <GiQueenCrown
+                      style={{ marginLeft: '4px', color: '#FFD700' }}
+                    />
+                  )}
+                </RoomTitle>
                 <LastMessage>
                   {(room.lastMessage || '새로운 채팅방입니다.').length > 25
                     ? `${(room.lastMessage || '새로운 채팅방입니다.').slice(
