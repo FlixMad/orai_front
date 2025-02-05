@@ -77,7 +77,7 @@ const LeaveRequestPage = () => {
       type: vacationData.type, // 동적으로 선택된 휴가 유형
       startDate: vacationData.startDate, // 시작일
       endDate: vacationData.endDate, // 종료일
-      title: vacationData.reason, // 제목 (사유를 제목으로 사용)
+      title: vacationData.reason, // 제목 (사유를 제목으로 사용)` 
       userId: userId, // 가져온 userId 사용
     };
 
