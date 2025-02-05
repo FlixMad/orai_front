@@ -42,21 +42,28 @@ const Dashboard = () => {
   const handleSearch = (e) => {
     const searchValue = e.target.value;
     setLocalSearchTerm(searchValue);
-    setPage(0);
-    setUsers([]);
-    debouncedSearch(searchValue);
+    if (searchValue.trim() === "") {
+      setSearchTerm("");
+      setPage(0);
+      setUsers([]);
+    } else {
+      debouncedSearch(searchValue);
+    }
   };
 
   const handleKeyPress = (e) => {
-    if (e.key === "Enter" && localSearchTerm.trim()) {
-      const trimmedSearchTerm = localSearchTerm.trim();
-      if (
-        trimmedSearchTerm.startsWith("#") ||
-        trimmedSearchTerm.startsWith("@")
-      ) {
-        setSearchTags((prevTags) => [...prevTags, trimmedSearchTerm]);
+    if (e.key === "Enter") {
+      e.preventDefault();
+      if (localSearchTerm.trim()) {
+        const trimmedSearchTerm = localSearchTerm.trim();
+        if (
+          trimmedSearchTerm.startsWith("#") ||
+          trimmedSearchTerm.startsWith("@")
+        ) {
+          setSearchTags((prevTags) => [...prevTags, trimmedSearchTerm]);
+        }
+        setLocalSearchTerm("");
       }
-      setLocalSearchTerm("");
     }
   };
 
