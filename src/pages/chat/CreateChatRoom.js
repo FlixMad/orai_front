@@ -30,9 +30,7 @@ const CreateChatRoom = ({ onChatRoomCreated }) => {
       connectHeaders: {
         Authorization: `Bearer ${localStorage.getItem('ACCESS_TOKEN')}`,
       },
-      debug: function (str) {
-        console.log(str);
-      },
+      debug: function () {},
       reconnectDelay: 5000,
       heartbeatIncoming: 4000,
       heartbeatOutgoing: 4000,
