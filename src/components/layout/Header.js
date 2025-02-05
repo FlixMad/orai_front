@@ -228,7 +228,7 @@ const Header = () => {
           text: "프로필",
           isReactIcon: false,
         };
-      case "/area":
+      case "/leave":
         return {
           icon: "/images/icons/vacation.png",
           text: "연차관리",
@@ -298,7 +298,7 @@ const Header = () => {
           <span>{user.name}</span>
           <div>{user.position}</div>
           <img
-            src={`http://localhost:8181/user-service/api/users/profileImage/${user.profileImage}`}
+            src={`${user.profileImage}`}
             alt="User Avatar"
           />
         </UserProfile>

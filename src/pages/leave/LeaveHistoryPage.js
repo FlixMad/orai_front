@@ -1,20 +1,47 @@
-import React, { useState, useEffect } from "react";
-import axios from "axios";
+import { useState, useEffect } from "react";
+import styled from "styled-components";
+import axiosInstance from "../../configs/axios-config";
+import { API_BASE_URL, USER } from "../../configs/host-config";
 
 const LeaveHistoryPage = () => {
   const [vacations, setVacations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-
-  // 현재 로그인된 사용자의 ID를 가져오는 방법을 고려 (예: JWT에서 추출, context 등)
-  const userId = "user-id"; // 실제로 로그인된 사용자 ID를 여기에 설정
+  const [userId, setUserId] = useState(null);
 
   useEffect(() => {
-    const fetchVacations = async () => {
+    const fetchUserData = async () => {
+      const token = localStorage.getItem("ACCESS_TOKEN");
+      if (!token) {
+        setError("로그인이 필요합니다.");
+        setLoading(false);
+        return;
+      }
+
       try {
-        // 백엔드 API 호출하여 휴가 내역 조회
-        const response = await axios.get(`/api/vacations/${userId}`);
-        setVacations(response.data); // 데이터를 state에 저장
+        const response = await axiosInstance.get(`${API_BASE_URL}${USER}/api/users/me`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setUserId(response.data.userId);
+      } catch (error) {
+        setError("사용자 정보를 가져오는 데 실패했습니다.");
+        setLoading(false);
+      }
+    };
+
+    fetchUserData();
+  }, []);
+
+  useEffect(() => {
+    if (!userId) return;
+
+    const fetchVacations = async () => {
+      const token = localStorage.getItem("ACCESS_TOKEN");
+      try {
+        const response = await axiosInstance.get(`${API_BASE_URL}${USER}/api/vacations/${userId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setVacations(response.data);
       } catch (err) {
         setError("휴가 내역을 가져오는 데 실패했습니다.");
       } finally {
@@ -23,29 +50,53 @@ const LeaveHistoryPage = () => {
     };
 
     fetchVacations();
-  }, [userId]); // userId가 바뀔 때마다 다시 호출
+  }, [userId]);
 
   if (loading) return <p>로딩 중...</p>;
-  if (error) return <p>{error}</p>;
+  if (error) return <ErrorMessage>{error}</ErrorMessage>;
 
   return (
-    <div>
+    <Container>
       <h2>휴가 내역</h2>
       {vacations.length > 0 ? (
-        <ul>
+        <ListContainer>
           {vacations.map((vacation) => (
-            <li key={vacation.vacationId}>
+            <VacationCard key={vacation.vacationId}>
               <h3>{vacation.title}</h3>
               <p>상태: {vacation.vacationState}</p>
               <p>기간: {vacation.startDate} - {vacation.endDate}</p>
-            </li>
+            </VacationCard>
           ))}
-        </ul>
+        </ListContainer>
       ) : (
         <p>휴가 내역이 없습니다.</p>
       )}
-    </div>
+    </Container>
   );
 };
+
+const Container = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+`;
+
+const ListContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+`;
+
+const VacationCard = styled.div`
+  padding: 12px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  background-color: #f9f9f9;
+`;
+
+const ErrorMessage = styled.p`
+  color: red;
+  margin-top: 16px;
+`;
 
 export default LeaveHistoryPage;
