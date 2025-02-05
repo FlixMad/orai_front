@@ -5,9 +5,9 @@ import { useEffect, useState } from "react";
 import { FiDatabase } from "react-icons/fi"; // FiGrid 제거
 import { API_BASE_URL, ETC, USER } from "../../configs/host-config";
 import axiosInstance from "../../configs/axios-config";
-import { NativeEventSource, EventSourcePolyfill } from "event-source-polyfill";
+// import { NativeEventSource, EventSourcePolyfill } from "event-source-polyfill";
 
-const EventSourceImpl = NativeEventSource || EventSourcePolyfill;
+// const EventSourceImpl = NativeEventSource || EventSourcePolyfill;
 
 const HeaderContainer = styled.header`
   height: 6vh;

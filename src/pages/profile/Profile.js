@@ -1,17 +1,19 @@
 import { useState, useEffect } from "react";
 import styled from "styled-components";
 import { useNavigate } from "react-router-dom";
-import { API_BASE_URL, USER } from "../../configs/host-config";
+import { API_BASE_URL } from "../../configs/host-config";
 
 const Profile = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState({
-    name: "오승준", // 기본값 설정
-    position: "팀장 | 개발팀", // 기본값 설정
-    profileImage: "/images/profile/user-avatar.png", // 기본값 설정
+    name: "오승준",
+    position: "팀장 | 개발팀",
+    profileImage: "/images/profile/user-avatar.png",
   });
   const [workStatus, setWorkStatus] = useState("업무 중");
   const [isWorking, setIsWorking] = useState(false);
+  const [workStartTime, setWorkStartTime] = useState(null); // 출근 시간
+  const [workEndTime, setWorkEndTime] = useState(null); // 퇴근 시간
   const [showStatusModal, setShowStatusModal] = useState(false);
 
   const workStatuses = [
@@ -24,7 +26,16 @@ const Profile = () => {
   ];
 
   useEffect(() => {
-    // ACCESS_TOKEN을 사용해 유저 정보 가져오기
+    const savedWorkStatus = localStorage.getItem("isWorking");
+    const savedWorkStartTime = localStorage.getItem("workStartTime");
+
+    if (savedWorkStatus === "true") {
+      setIsWorking(true);
+      setWorkStartTime(savedWorkStartTime);
+    } else {
+      setIsWorking(false);
+    }
+
     fetch(`${API_BASE_URL}/user-service/api/users/me`, {
       headers: {
         Authorization: `Bearer ${localStorage.getItem("ACCESS_TOKEN")}`,
@@ -34,28 +45,30 @@ const Profile = () => {
       .then((data) => {
         setUser({
           name: data.name,
-          position: `${data.position} | ${data.departmentId}`, // 부서 정보 포함
+          position: `${data.position} | ${data.departmentId}`,
           profileImage: data.profileImage || "/images/profile/user-avatar.png",
         });
       })
       .catch((error) => {
         console.error("사용자 정보 가져오기 실패:", error);
       });
-  }, []); // 컴포넌트 마운트 시에만 호출
+  }, []);
 
   const handleWorkStart = () => {
+    const startTime = new Date().toISOString();
     setIsWorking(true);
-    const token = localStorage.getItem("ACCESS_TOKEN");
+    setWorkStartTime(startTime); // 출근 시간 설정
+    localStorage.setItem("isWorking", "true");
+    localStorage.setItem("workStartTime", startTime); // 출근 시간 저장
 
-    // 출근 API 호출
     fetch(`${API_BASE_URL}/user-service/api/attitude/checkin`, {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${token}`, // 토큰을 Authorization 헤더에 추가
+        Authorization: `Bearer ${localStorage.getItem("ACCESS_TOKEN")}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        userId: user.userId, // 필요에 따라 사용자 ID나 기타 필요한 데이터 추가
+        userId: user.userId,
       }),
     })
       .then((response) => response.json())
@@ -68,18 +81,19 @@ const Profile = () => {
   };
 
   const handleWorkEnd = () => {
+    const endTime = new Date().toISOString();
     setIsWorking(false);
-    const token = localStorage.getItem("ACCESS_TOKEN");
+    setWorkEndTime(endTime); // 퇴근 시간 설정
+    localStorage.setItem("isWorking", "false");
 
-    // 퇴근 API 호출
     fetch(`${API_BASE_URL}/user-service/api/attitude/checkout`, {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${token}`, // 토큰을 Authorization 헤더에 추가
+        Authorization: `Bearer ${localStorage.getItem("ACCESS_TOKEN")}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        userId: user.userId, // 필요에 따라 사용자 ID나 기타 필요한 데이터 추가
+        userId: user.userId,
       }),
     })
       .then((response) => response.json())
@@ -94,14 +108,29 @@ const Profile = () => {
   const handleStatusChange = (status) => {
     setWorkStatus(status);
     setShowStatusModal(false);
-    // API 호출: 상태 변경 저장
   };
 
   const handleLogout = () => {
-    // JWT 토큰 제거
     localStorage.removeItem("ACCESS_TOKEN");
     navigate("/login");
   };
+
+  const calculateWorkDuration = () => {
+    if (workStartTime && workEndTime) {
+      const start = new Date(workStartTime);
+      const end = new Date(workEndTime);
+      const durationInMilliseconds = end - start;
+      const hours = Math.floor(durationInMilliseconds / (1000 * 60 * 60));
+      const minutes = Math.floor((durationInMilliseconds % (1000 * 60 * 60)) / (1000 * 60));
+      return `${hours}시간 ${minutes}분`;
+    }
+    return "근무 시간이 없습니다.";
+  };
+
+  useEffect(() => {
+    console.log("출근 시간:", workStartTime);
+    console.log("퇴근 시간:", workEndTime);
+  }, [workStartTime, workEndTime]);
 
   return (
     <ProfileContainer>
@@ -116,18 +145,18 @@ const Profile = () => {
             <Position>{user.position}</Position>
             <StatusButton onClick={() => setShowStatusModal(true)}>
               {workStatus}
-              <img src="/images/icons/arrow-down.png" alt="상태 변경" />
+              <img src="/images/icons/work-end.png" alt="상태 변경" />
             </StatusButton>
           </UserDetails>
         </UserInfo>
         <WorkActions>
           {!isWorking ? (
-            <ActionButton onClick={handleWorkStart} color="primary">
+            <ActionButton onClick={handleWorkStart} color="primary" disabled={workStartTime}>
               <img src="/images/icons/work-start.png" alt="출근" />
               출근하기
             </ActionButton>
           ) : (
-            <ActionButton onClick={handleWorkEnd} color="secondary3">
+            <ActionButton onClick={handleWorkEnd} color="secondary3" disabled={workEndTime}>
               <img src="/images/icons/work-end.png" alt="퇴근" />
               퇴근하기
             </ActionButton>
@@ -136,48 +165,6 @@ const Profile = () => {
       </ProfileHeader>
 
       <ContentGrid>
-        <Section>
-          <SectionTitle>근태 현황</SectionTitle>
-          <AttendanceStats>
-            <StatItem>
-              <Label>이번 주 근무</Label>
-              <Value>32시간</Value>
-            </StatItem>
-            <StatItem>
-              <Label>이번 주 초과근무</Label>
-              <Value>2시간</Value>
-            </StatItem>
-            <StatItem>
-              <Label>이번 달 근무</Label>
-              <Value>140시간</Value>
-            </StatItem>
-          </AttendanceStats>
-        </Section>
-
-        <Section>
-          <SectionTitle>연차 현황</SectionTitle>
-          <LeaveStats>
-            <StatItem>
-              <Label>총 연차</Label>
-              <Value>15일</Value>
-            </StatItem>
-            <StatItem>
-              <Label>사용 연차</Label>
-              <Value>7일</Value>
-            </StatItem>
-            <StatItem>
-              <Label>잔여 연차</Label>
-              <Value>8일</Value>
-            </StatItem>
-          </LeaveStats>
-          <ActionButton
-            onClick={() => navigate("/leave-request")}
-            color="primary"
-          >
-            휴가 신청
-          </ActionButton>
-        </Section>
-
         <Section>
           <SectionTitle>계정 관리</SectionTitle>
           <AccountActions>
@@ -188,6 +175,16 @@ const Profile = () => {
               로그아웃
             </ActionButton>
           </AccountActions>
+        </Section>
+        <Section>
+          <SectionTitle>근무 시간</SectionTitle>
+          <WorkDurationBox>
+            {workStartTime && workEndTime ? (
+              <p>{calculateWorkDuration()}</p>
+            ) : (
+              <p>출근과 퇴근 시간을 기록해주세요.</p>
+            )}
+          </WorkDurationBox>
         </Section>
       </ContentGrid>
 
@@ -218,6 +215,7 @@ const Profile = () => {
   );
 };
 
+// Styled Components
 const ProfileContainer = styled.div`
   padding: 24px;
   height: 100%;
@@ -342,11 +340,7 @@ const ActionButton = styled.button`
   }
 `;
 
-const ContentGrid = styled.div`
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 24px;
-`;
+
 
 const Section = styled.div`
   background: white;
@@ -356,35 +350,8 @@ const Section = styled.div`
 `;
 
 const SectionTitle = styled.h3`
-  margin-bottom: 20px;
-  color: ${({ theme }) => theme.colors.text1};
-  font-size: 18px;
-`;
-
-const AttendanceStats = styled.div`
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 16px;
-`;
-
-const LeaveStats = styled(AttendanceStats)`
-  margin-bottom: 20px;
-`;
-
-const StatItem = styled.div`
-  text-align: center;
-`;
-
-const Label = styled.div`
-  color: ${({ theme }) => theme.colors.text2};
-  font-size: 14px;
-  margin-bottom: 8px;
-`;
-
-const Value = styled.div`
-  color: ${({ theme }) => theme.colors.text1};
+  margin-bottom: 16px;
   font-size: 20px;
-  font-weight: 600;
 `;
 
 const AccountActions = styled.div`
@@ -392,71 +359,85 @@ const AccountActions = styled.div`
   flex-direction: column;
   gap: 12px;
 `;
+const ContentGrid = styled.div`
+  display: grid;
+  grid-template-columns: 1fr 1fr; /* 1:1 ratio */
+  gap: 24px;
+`;
+const WorkDurationBox = styled.div`
+  background-color: ${({ theme }) => theme.colors.background1};
+  padding: 16px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  font-size: 18px;
+  font-weight: 500;
+  text-align: center;
+  color: ${({ theme }) => theme.colors.text1};
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100px;
+  border: 2px solid ${({ theme }) => theme.colors.primary};
+
+  p {
+    margin: 0;
+    font-size: 20px;
+    color: ${({ theme }) => theme.colors.text2};
+  }
+`;
 
 const StatusModal = styled.div`
   position: fixed;
   top: 0;
   left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  width: 100vw;
+  height: 100vh;
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 1000;
+  background: rgba(0, 0, 0, 0.5);
 `;
 
 const ModalContent = styled.div`
   background: white;
-  border-radius: 12px;
   padding: 24px;
+  border-radius: 12px;
   width: 400px;
-  max-width: 90%;
 `;
 
 const ModalHeader = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
-
-  h3 {
-    color: ${({ theme }) => theme.colors.text1};
-    margin: 0;
-  }
+  margin-bottom: 16px;
+  font-size: 18px;
 `;
 
 const CloseButton = styled.button`
-  background: none;
+  background: transparent;
   border: none;
-  font-size: 20px;
-  color: ${({ theme }) => theme.colors.text2};
+  font-size: 18px;
   cursor: pointer;
-
-  &:hover {
-    color: ${({ theme }) => theme.colors.text1};
-  }
 `;
 
-const StatusList = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+const StatusList = styled.ul`
+  list-style: none;
+  padding: 0;
 `;
 
-const StatusOption = styled.button`
-  padding: 12px;
-  text-align: left;
+const StatusOption = styled.li`
+  padding: 12px 16px;
+  cursor: pointer;
   background: ${({ active, theme }) =>
     active ? theme.colors.background1 : "transparent"};
-  border: none;
+  color: ${({ active, theme }) =>
+    active ? theme.colors.primary : theme.colors.text1};
   border-radius: 8px;
-  color: ${({ theme }) => theme.colors.text1};
-  cursor: pointer;
-  transition: all 0.2s ease;
+  margin-bottom: 8px;
+  font-size: 16px;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.background1};
+    background: ${({ theme }) => theme.colors.background2};
   }
 `;
 
