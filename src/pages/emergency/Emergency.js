@@ -34,6 +34,7 @@ const Emergency = () => {
           const response = await axiosInstance.get(
             `${API_BASE_URL}${USER}/api/admin/users/list`
           );
+          console.log(response.data.result);
           setUsers(response.data.result || []);
         } else {
           const departmentId = Object.entries(departments).find(
