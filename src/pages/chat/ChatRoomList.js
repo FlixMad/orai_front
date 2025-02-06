@@ -8,6 +8,7 @@ import { useRecoilValue } from 'recoil';
 import { userState } from '../../atoms/userState';
 import { useNavigate, useLocation } from 'react-router-dom';
 import AddChatMember from './AddChatMember';
+import { FaRegImage } from 'react-icons/fa6';
 import { IoMdSearch } from 'react-icons/io';
 import { GiQueenCrown } from 'react-icons/gi';
 
@@ -454,7 +455,7 @@ const ChatRoomList = ({ onChatRoomCreated }) => {
                         alt="채팅방 이미지 미리보기"
                       />
                     ) : (
-                      <img src="/images/icons/factory.png" alt="기본 이미지" />
+                      <FaRegImage size={90} opacity={0.5} />
                     )}
                   </ImagePreview>
                   <ImageInput
@@ -814,10 +815,11 @@ const ImageInputWrapper = styled.div`
 const ImagePreview = styled.div`
   width: 100px;
   height: 100px;
-  border-radius: 12px;
   overflow: hidden;
   margin-bottom: 10px;
-  border: 2px solid ${({ theme }) => theme.colors.border};
+  display: flex;
+  justify-content: center;
+  align-items: center;
 
   img {
     width: 100%;

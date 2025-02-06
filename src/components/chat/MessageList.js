@@ -78,13 +78,6 @@ const MessageTime = styled.div`
   margin: 0 4px;
 `;
 
-const SenderInfo = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 4px;
-`;
-
 const SenderName = styled.div`
   font-size: 12px;
   color: ${({ theme }) => theme.colors.text2};
@@ -223,9 +216,38 @@ const MessageList = ({ messages, setMessages, formatDate, chatRoomId }) => {
     }
   }, [messages, chatRoomId]);
 
+  const getLastUserMessage = () => {
+    // 현재 사용자의 모든 메시지를 시간순으로 가져옴
+    const userMessages = messages.filter(
+      (msg) => msg.senderId === currentUserId
+    );
+
+    // 마지막 메시지가 EDIT나 DELETE 타입이면 수정/삭제 불가능
+    const lastMessage = userMessages[userMessages.length - 1];
+    if (
+      lastMessage &&
+      (lastMessage.type === 'EDIT' || lastMessage.type === 'DELETE')
+    ) {
+      return null;
+    }
+
+    // 마지막 CHAT 타입 메시지 찾기
+    const lastChatMessage = userMessages
+      .filter((msg) => msg.type === 'CHAT')
+      .pop();
+
+    return lastChatMessage?.messageId || null;
+  };
+
   const handleMessageClick = (e, message) => {
     e.preventDefault();
-    if (message.senderId === currentUserId) {
+    const lastUserMessageId = getLastUserMessage();
+
+    // 마지막 CHAT 타입 메시지인 경우에만 컨텍스트 메뉴 표시
+    if (
+      message.senderId === currentUserId &&
+      message.messageId === lastUserMessageId
+    ) {
       setSelectedMessageId(
         selectedMessageId === message.messageId ? null : message.messageId
       );
@@ -276,6 +298,8 @@ const MessageList = ({ messages, setMessages, formatDate, chatRoomId }) => {
         const isMine = message.senderId === currentUserId;
         const isSystem = message.type === 'SYSTEM';
         const isDeleted = message.type === 'DELETE';
+        const lastUserMessageId = getLastUserMessage();
+        const canModify = message.messageId === lastUserMessageId;
 
         const previousMessage = index > 0 ? messages[index - 1] : null;
         const isFirstMessage =
@@ -332,7 +356,8 @@ const MessageList = ({ messages, setMessages, formatDate, chatRoomId }) => {
                   !isSystem && !isDeleted && handleMessageClick(e, message)
                 }
                 style={{
-                  cursor: isMine && !isDeleted ? 'pointer' : 'default',
+                  cursor:
+                    isMine && !isDeleted && canModify ? 'pointer' : 'default',
                 }}
               >
                 {editingMessage?.messageId === message.messageId ? (
@@ -360,7 +385,8 @@ const MessageList = ({ messages, setMessages, formatDate, chatRoomId }) => {
               </MessageContent>
               {selectedMessageId === message.messageId &&
                 isMine &&
-                !isDeleted && (
+                !isDeleted &&
+                canModify && (
                   <ContextMenu $isMine={isMine}>
                     <button onClick={() => handleEdit(message)}>수정</button>
                     <button onClick={handleDelete}>삭제</button>
